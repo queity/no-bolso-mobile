@@ -1,18 +1,11 @@
 # No Bolso
 
-Aplicativo mobile de gerenciamento financeiro desenvolvido em Flutter para o
-**Tech Challenge — Fase 3** da pós-graduação em Front-end (POSTECH/FIAP).
+Aplicativo mobile de gerenciamento financeiro desenvolvido em Flutter.
 
 O app permite ao usuário autenticado gerenciar suas transações financeiras,
 com dashboard de análises, listagem com filtros/paginação, cadastro e edição
 de transações (com upload de recibos), integrando Firebase para autenticação,
 banco de dados (Cloud Firestore) e armazenamento de arquivos (Firebase Storage).
-
-## Status do projeto
-
-Em desenvolvimento. Setup do projeto, navegação e integração inicial com
-Firebase já estão prontos; as telas de Dashboard, Login, Listagem e
-Adicionar/Editar Transação ainda são placeholders.
 
 ## Stack
 

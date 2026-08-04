@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "563439771466",
+    "project_id": "no-bolso-mobile",
+    "storage_bucket": "no-bolso-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:563439771466:android:a739ebb0621711d9956bb3",
+        "android_client_info": {
+          "package_name": "com.postech.nobolso.no_bolso_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBSisFlpZg31JTSd6elXb2nymgOuONMu7w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

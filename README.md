@@ -52,13 +52,8 @@ lib/
 ### Pré-requisitos
 
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) instalado
-- [Firebase CLI](https://firebase.google.com/docs/cli#install_the_firebase_cli) instalada (`npm install -g firebase-tools`)
-- FlutterFire CLI: `dart pub global activate flutterfire_cli`
-- Uma conta com acesso ao projeto Firebase **no-bolso-mobile**
-
-> No Windows, builds com plugins exigem suporte a symlink: ative o **Modo de
-> Desenvolvedor** (`start ms-settings:developers`) ou rode o terminal como
-> Administrador.
+- Um dispositivo pra rodar o app: emulador Android (via Android Studio →
+  Device Manager) ou um device físico com depuração USB ativada
 
 ### Passo a passo
 
@@ -69,23 +64,44 @@ lib/
    flutter pub get
    ```
 
-2. Autentique-se no Firebase:
+2. Confirme que tem um dispositivo disponível:
    ```bash
-   firebase login
+   flutter devices
    ```
+   Se não aparecer nenhum, abra um emulador (`flutter emulators --launch <id>`,
+   ou liste os disponíveis com `flutter emulators`) ou conecte um device físico.
+   Sem nenhum dos dois, dá pra rodar no navegador como alternativa:
+   `flutter run -d chrome`.
 
-3. Gere a configuração do Firebase para o projeto (já existe um app registrado;
-   isso apenas recria `lib/firebase_options.dart` localmente caso necessário):
-   ```bash
-   flutterfire configure
-   ```
-   Selecione o projeto **No Bolso** (`no-bolso-mobile`) e as plataformas
-   `android` e `ios`.
-
-4. Rode o app:
+3. Rode o app:
    ```bash
    flutter run
    ```
+
+O `lib/firebase_options.dart` já está commitado no repositório, então **não é
+necessário rodar `flutterfire configure`** pra rodar o app — os passos acima
+já bastam.
+
+### Regenerando a configuração do Firebase (opcional)
+
+Só necessário se for adicionar uma nova plataforma ou o projeto Firebase
+mudar. Exige ter sido adicionado como membro do projeto **no-bolso-mobile**
+no [console do Firebase](https://console.firebase.google.com) — peça acesso
+a quem administra o projeto.
+
+```bash
+npm install -g firebase-tools   # requer Node.js instalado
+dart pub global activate flutterfire_cli
+firebase login
+flutterfire configure
+```
+
+No Windows, se o comando `flutterfire` não for reconhecido depois de
+ativado, o executável fica em `%LOCALAPPDATA%\Pub\Cache\bin`, que pode não
+estar no PATH. Adicione essa pasta ao PATH e abra um terminal novo:
+```powershell
+setx Path "$($env:Path);$env:LOCALAPPDATA\Pub\Cache\bin"
+```
 
 ### Testes e análise estática
 
@@ -93,6 +109,50 @@ lib/
 flutter analyze
 flutter test
 ```
+
+## Design system
+
+O tema do app fica centralizado em `lib/core/theme/`:
+
+- `app_colors.dart` — paleta de marca e cores semânticas (receita/despesa)
+- `financial_colors.dart` — `ThemeExtension` com as cores de receita/despesa,
+  acessível via `Theme.of(context)`
+- `app_theme.dart` — monta o `ThemeData` final (light e dark)
+
+Evite usar `Colors.xxx` direto nas telas. Prefira:
+
+```dart
+final colorScheme = Theme.of(context).colorScheme;
+final financial = Theme.of(context).extension<FinancialColors>()!;
+
+Text('+ R\$ 100,00', style: TextStyle(color: financial.income));
+Text('- R\$ 50,00', style: TextStyle(color: financial.expense));
+```
+
+Isso mantém a consistência visual entre as telas e já funciona com dark mode
+(`themeMode: ThemeMode.system`, configurado em `main.dart`).
+
+## Troubleshooting
+
+**`flutter doctor` acusa `cmdline-tools component is missing`**
+No Android Studio: **Tools → SDK Manager → aba SDK Tools** → marque **Android
+SDK Command-line Tools (latest)** → Apply. Depois rode
+`flutter doctor --android-licenses` e aceite todas.
+
+**Build falha no Windows pedindo suporte a symlink**
+Builds com plugins (caso do Firebase) precisam de symlink no Windows. Ative o
+**Modo de Desenvolvedor** (`start ms-settings:developers`) ou rode o terminal
+como Administrador.
+
+**Tela preta ao rodar no emulador Android**
+Costuma ser um problema do renderizador Impeller com o driver de GPU do
+emulador. Duas soluções:
+- `flutter run --no-enable-impeller`
+- No Android Studio: **Device Manager** → editar o AVD → trocar
+  **Aceleração gráfica** de Hardware para **Software**
+
+Como alternativa rápida pra conferir layout/UI sem emulador, dá pra rodar no
+navegador: `flutter run -d chrome`.
 
 ## Configuração do Firebase
 

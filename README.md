@@ -28,6 +28,7 @@ lib/
 ├── models/                      # modelos de dados (ex.: Transaction, User)
 ├── providers/                   # ChangeNotifiers / gerenciamento de estado global
 ├── screens/
+│   ├── splash/                  # tela inicial / verificação de autenticação
 │   ├── auth/                    # login
 │   ├── dashboard/                # gráficos e análises financeiras
 │   ├── transactions/
@@ -131,28 +132,6 @@ Text('- R\$ 50,00', style: TextStyle(color: financial.expense));
 
 Isso mantém a consistência visual entre as telas e já funciona com dark mode
 (`themeMode: ThemeMode.system`, configurado em `main.dart`).
-
-## Troubleshooting
-
-**`flutter doctor` acusa `cmdline-tools component is missing`**
-No Android Studio: **Tools → SDK Manager → aba SDK Tools** → marque **Android
-SDK Command-line Tools (latest)** → Apply. Depois rode
-`flutter doctor --android-licenses` e aceite todas.
-
-**Build falha no Windows pedindo suporte a symlink**
-Builds com plugins (caso do Firebase) precisam de symlink no Windows. Ative o
-**Modo de Desenvolvedor** (`start ms-settings:developers`) ou rode o terminal
-como Administrador.
-
-**Tela preta ao rodar no emulador Android**
-Costuma ser um problema do renderizador Impeller com o driver de GPU do
-emulador. Duas soluções:
-- `flutter run --no-enable-impeller`
-- No Android Studio: **Device Manager** → editar o AVD → trocar
-  **Aceleração gráfica** de Hardware para **Software**
-
-Como alternativa rápida pra conferir layout/UI sem emulador, dá pra rodar no
-navegador: `flutter run -d chrome`.
 
 ## Configuração do Firebase
 

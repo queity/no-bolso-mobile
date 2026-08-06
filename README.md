@@ -21,7 +21,7 @@ lib/
 ├── main.dart                    # entrypoint, inicializa o Firebase e o app
 ├── firebase_options.dart        # gerado pelo `flutterfire configure`
 ├── core/
-│   ├── router/                  # configuração de rotas (go_router)
+│   ├── router/                  # configuração de rotas (go_router) + bottom nav (MainShell)
 │   └── theme/                   # tema do app
 ├── data/
 │   └── firebase/                # serviços de acesso ao Firebase (Auth, Firestore, Storage)
@@ -39,12 +39,16 @@ lib/
 
 ## Rotas
 
+Dashboard e Transações vivem dentro de uma bottom navigation bar
+(`StatefulShellRoute`, ver `core/router/main_shell.dart`) — o Dashboard é a
+tela principal do app. As telas de Nova/Editar transação abrem por cima, sem a bottom nav.
+
 | Rota | Tela |
 |---|---|
 | `/` | Splash |
 | `/login` | Login |
-| `/dashboard` | Dashboard |
-| `/transactions` | Listagem de transações |
+| `/dashboard` | Dashboard (aba) |
+| `/transactions` | Listagem de transações (aba) |
 | `/transactions/new` | Nova transação |
 | `/transactions/:id/edit` | Editar transação |
 

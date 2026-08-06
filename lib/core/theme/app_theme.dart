@@ -7,7 +7,12 @@ import 'financial_colors.dart';
 /// `theme: AppTheme.light` / `darkTheme: AppTheme.dark`.
 abstract class AppTheme {
   static ThemeData get light {
-    final colorScheme = ColorScheme.fromSeed(seedColor: AppColors.seed);
+    // O `primary` derivado automaticamente pelo ColorScheme.fromSeed fica
+    // desaturado demais para texto (ex.: TextButton). Fixamos ele na cor de
+    // marca de verdade pra ficar mais legível/evidente.
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: AppColors.seed,
+    ).copyWith(primary: AppColors.seed);
 
     return ThemeData(
       useMaterial3: true,
@@ -42,6 +47,12 @@ abstract class AppTheme {
           ),
         ),
       ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
     );
   }
 
@@ -49,7 +60,7 @@ abstract class AppTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.seed,
       brightness: Brightness.dark,
-    );
+    ).copyWith(primary: AppColors.incomeDark);
 
     return ThemeData(
       useMaterial3: true,
@@ -82,6 +93,12 @@ abstract class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
     );

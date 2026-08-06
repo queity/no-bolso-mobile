@@ -75,6 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       'Entre para continuar gerenciando suas finanças.',
                       style: textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -149,7 +150,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         Text(
                           'Não tem conta?',
                           style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         TextButton(

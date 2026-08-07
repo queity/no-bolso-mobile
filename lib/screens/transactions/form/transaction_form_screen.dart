@@ -15,10 +15,9 @@ class TransactionFormScreen extends StatelessWidget {
     final isEditing = transactionId != null;
 
     return Scaffold(
-      // Sem título no AppBar: fica só o botão de voltar (a tela é aberta
-      // por cima da bottom nav). O título fica estilizado no corpo, igual
-      // à listagem de transações.
-      appBar: AppBar(),
+      appBar: AppBar(
+        title: Text('Transação'),
+      ),
       body: SafeArea(
         top: false,
         child: Padding(
@@ -27,7 +26,7 @@ class TransactionFormScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                isEditing ? 'Editar Transação' : 'Nova Transação',
+                isEditing ? 'Editar' : 'Adicionar',
                 style: textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),

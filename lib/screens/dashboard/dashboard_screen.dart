@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 
-/// Placeholder do Dashboard.
-/// TODO: exibir gráficos e análises financeiras das transações do usuário.
+import '../../providers/auth_provider.dart';
+
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
-  /// Saudação de acordo com o horário do dia.
   String get _greeting {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Bom dia';
@@ -14,10 +15,12 @@ class DashboardScreen extends StatelessWidget {
     return 'Boa noite';
   }
 
-  void _handleLogout(BuildContext context) {
-    // TODO: chamar FirebaseAuth.instance.signOut() quando a autenticação
-    // real estiver implementada.
-    context.go('/login');
+  // 3. Função de Logout 
+  void _handleLogout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    if (context.mounted) {
+      context.go('/login');
+    }
   }
 
   @override
@@ -25,6 +28,11 @@ class DashboardScreen extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final topPadding = MediaQuery.of(context).padding.top;
+
+    // 4. Pegando o usuário global que está logado no momento!
+    final user = context.watch<AuthProvider>().user;
+
+    final firstName = user?.displayName?.split(' ')[0] ?? 'Usuário';
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -63,9 +71,8 @@ class DashboardScreen extends StatelessWidget {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        // TODO: usar o nome real do usuário autenticado.
                         Text(
-                          'Usuário',
+                          firstName,
                           style: textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: colorScheme.primary,
@@ -103,7 +110,6 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-/// Recorte com ondulação na parte inferior, usado no header do Dashboard
 class _WaveHeaderClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {

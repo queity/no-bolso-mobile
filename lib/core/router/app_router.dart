@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
+import '../../providers/auth_provider.dart';
 import '../../screens/auth/login_screen.dart';
+import '../../screens/auth/register_screen.dart';
 import '../../screens/dashboard/dashboard_screen.dart';
 import '../../screens/splash/splash_screen.dart';
 import '../../screens/transactions/form/transaction_form_screen.dart';
@@ -12,6 +15,7 @@ import 'main_shell.dart';
 abstract class AppRoutes {
   static const splash = 'splash';
   static const login = 'login';
+  static const register = 'register';
   static const dashboard = 'dashboard';
   static const transactions = 'transactions';
   static const newTransaction = 'new-transaction';
@@ -35,6 +39,31 @@ final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
   navigatorKey: _rootNavigatorKey,
+
+  redirect: (context, state) {
+    // Lê o estado global 
+    final isAuth = context.read<AuthProvider>().isAuth;
+
+    // Verifica em qual tela o usuário está tentando entrar
+    final isSplash = state.matchedLocation == '/';
+    final isAuthRoute =
+        state.matchedLocation == '/login' ||
+        state.matchedLocation == '/register';
+
+    // REGRA 1: Se NÃO está logado e tenta ir para qualquer lugar (exceto splash e login/registro)
+    if (!isAuth && !isSplash && !isAuthRoute) {
+      return '/login'; // <-- Redireciona o usuário para o login!
+    }
+
+    // REGRA 2: Se ESTÁ logado, não faz sentido ele conseguir acessar a tela de Login ou Criar Conta
+    if (isAuth && isAuthRoute) {
+      return '/dashboard'; // <-- Redireciona o usuário direto para o app!
+    }
+
+    // REGRA 3: Se estiver tudo certo, permite a navegação normalmente
+    return null;
+  },
+
   routes: [
     GoRoute(
       path: '/',
@@ -45,6 +74,11 @@ final GoRouter appRouter = GoRouter(
       path: '/login',
       name: AppRoutes.login,
       builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/register',
+      name: AppRoutes.register,
+      builder: (context, state) => const RegisterScreen(),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
@@ -81,9 +115,8 @@ final GoRouter appRouter = GoRouter(
       path: '/transactions/:id/edit',
       name: AppRoutes.editTransaction,
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => TransactionFormScreen(
-        transactionId: state.pathParameters['id'],
-      ),
+      builder: (context, state) =>
+          TransactionFormScreen(transactionId: state.pathParameters['id']),
     ),
   ],
 );

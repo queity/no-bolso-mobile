@@ -64,6 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '563439771466',
     projectId: 'no-bolso-mobile',
     storageBucket: 'no-bolso-mobile.firebasestorage.app',
+    iosClientId: '563439771466-jnblcqenbg0c1v4lud8oug23kt6uqe87.apps.googleusercontent.com',
     iosBundleId: 'com.postech.nobolso.noBolsoMobile',
   );
 
@@ -73,6 +74,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '563439771466',
     projectId: 'no-bolso-mobile',
     storageBucket: 'no-bolso-mobile.firebasestorage.app',
+    iosClientId: '563439771466-jnblcqenbg0c1v4lud8oug23kt6uqe87.apps.googleusercontent.com',
     iosBundleId: 'com.postech.nobolso.noBolsoMobile',
   );
 

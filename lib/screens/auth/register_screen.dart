@@ -1,64 +1,69 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+// IMPORTANTE: Ajuste o caminho abaixo para onde o seu auth_service.dart está salvo
 import '../../data/firebase/auth_service.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController =
+      TextEditingController(); // Novo controlador
+
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
-  // 2. Instanciando o serviço 
   final AuthService _authService = AuthService();
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  Future<void> _handleRegister() async {
     if (_formKey.currentState?.validate() ?? false) {
-      // Muda a tela para o estado de "carregando"
       setState(() {
         _isLoading = true;
       });
 
-      // Chama o Firebase passando o e-mail e senha digitados
-      final user = await _authService.signIn(
+      // Chama a função de CRIAR CONTA que você fez no AuthService
+      final user = await _authService.signUp(
+        _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
-      // Tira o "carregando" da tela
       setState(() {
         _isLoading = false;
       });
 
-      // Se o usuário for nulo, deu erro (senha errada, não existe, etc.)
       if (user == null) {
-        // O "if (mounted)" é uma regra do Flutter. Sempre que usamos o "context"
-        // depois de um "await", precisamos verificar se a tela ainda existe.
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('E-mail ou senha incorretos. Tente novamente!'),
+              content: Text(
+                'Erro ao criar conta. O e-mail já pode estar em uso.',
+              ),
               backgroundColor: Colors.red,
             ),
           );
         }
       } else {
-        // Sucesso! O usuário existe. O AuthProvider que envolvemos no main.dart
-        // já percebeu o login, mas navegamos à força por segurança.
+        // Conta criada com sucesso! O Firebase já loga o usuário automaticamente.
+        // O seu AuthProvider vai perceber e atualizar o app inteiro.
         if (mounted) {
           context.go('/dashboard');
         }
@@ -72,6 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
+      appBar: AppBar(title: const Text('Criar Conta'), centerTitle: true),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -83,37 +89,39 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 32),
-                    Container(
-                      width: 72,
-                      height: 72,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(
-                        Icons.account_balance_wallet_rounded,
-                        size: 36,
-                        color: colorScheme.onPrimaryContainer,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     Text(
-                      'Bem-vindo',
+                      'Junte-se ao No Bolso',
                       style: textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Entre para continuar gerenciando suas finanças.',
+                      'Crie sua conta e comece a gerenciar suas finanças agora mesmo.',
                       style: textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w500,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 32),
+                    TextFormField(
+                      controller: _nameController,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'Nome completo',
+                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Informe seu nome';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -136,8 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _handleLogin(),
+                      textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: 'Senha',
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
@@ -164,46 +171,49 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          // TODO: fluxo de recuperação de senha.
-                        },
-                        child: const Text('Esqueci minha senha'),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _confirmPasswordController,
+                      obscureText: _obscureConfirmPassword,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _handleRegister(),
+                      decoration: InputDecoration(
+                        labelText: 'Confirmar Senha',
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword;
+                            });
+                          },
+                        ),
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Confirme sua senha';
+                        }
+                        if (value != _passwordController.text) {
+                          return 'As senhas não coincidem';
+                        }
+                        return null;
+                      },
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 32),
                     ElevatedButton(
-                      // Se estiver carregando, passamos null para desabilitar o clique
-                      onPressed: _isLoading ? null : _handleLogin,
+                      onPressed: _isLoading ? null : _handleRegister,
                       child: _isLoading
                           ? const SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Entrar'),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Não tem conta?',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurface,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            // Navega para a tela de registro
-                            context.push('/register');
-                          },
-                          child: const Text('Criar conta'),
-                        ),
-                      ],
+                          : const Text('Cadastrar'),
                     ),
                   ],
                 ),

@@ -2,17 +2,27 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /transactions/{transactionId} {
-      // Só permite criar uma transação se o usuário estiver autenticado e o
-      // campo userId do documento for o dele mesmo (evita criar transação
-      // em nome de outra pessoa).
-      allow create: if request.auth != null
-                    && request.auth.uid == request.resource.data.userId;
 
-      // Só permite ler, editar ou apagar transações que pertencem ao
-      // próprio usuário autenticado.
+    // Transações são privadas: cada usuário só enxerga e mexe nas suas.
+    //
+    // A checagem de dono que existe na tela de edição é só experiência do
+    // usuário — é aqui que a regra vale de verdade, porque o cliente pode ser
+    // trocado por qualquer um com o SDK do Firebase.
+    match /transactions/{transactionId} {
+
+      // `resource.data` é o documento como ele já está no banco.
       allow read, update, delete: if request.auth != null
-                    && request.auth.uid == resource.data.userId;
+                                  && resource.data.userId == request.auth.uid;
+
+      // `request.resource.data` é o documento que está chegando. Sem essa
+      // regra, um usuário logado conseguiria criar transação no nome de outro.
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Tudo que não foi liberado acima fica bloqueado.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

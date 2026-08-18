@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Usada pelo image_picker quando o usuário anexa o recibo tirando foto.
+         A galeria não precisa de permissão: o image_picker usa o Photo Picker
+         do sistema, que só devolve o arquivo que o usuário escolheu. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="no_bolso_mobile"
         android:name="${applicationName}"

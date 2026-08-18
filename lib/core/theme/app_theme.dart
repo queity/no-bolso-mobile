@@ -34,7 +34,10 @@ abstract class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest,
-        border: OutlineInputBorder(
+        // Campo *filled* pede `UnderlineInputBorder`: o rotulo flutuante fica
+        // DENTRO do campo. Com `OutlineInputBorder` ele sobe pra cima da linha
+        // da borda (que aqui e invisivel), e o texto ficava pendurado na quina.
+        border: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
@@ -82,7 +85,10 @@ abstract class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest,
-        border: OutlineInputBorder(
+        // Campo *filled* pede `UnderlineInputBorder`: o rotulo flutuante fica
+        // DENTRO do campo. Com `OutlineInputBorder` ele sobe pra cima da linha
+        // da borda (que aqui e invisivel), e o texto ficava pendurado na quina.
+        border: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),

@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /transactions/{transactionId} {
+      // Só permite criar uma transação se o usuário estiver autenticado e o
+      // campo userId do documento for o dele mesmo (evita criar transação
+      // em nome de outra pessoa).
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.userId;
+
+      // Só permite ler, editar ou apagar transações que pertencem ao
+      // próprio usuário autenticado.
+      allow read, update, delete: if request.auth != null
+                    && request.auth.uid == resource.data.userId;
+    }
+  }
+}

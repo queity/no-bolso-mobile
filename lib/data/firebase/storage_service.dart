@@ -2,7 +2,10 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class StorageService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  // `late` pra não tocar o Firebase na hora de criar o StorageService (ex.:
+  // em testes de widget que só montam a tela) — só acessa de verdade quando
+  // o upload é chamado.
+  late final FirebaseStorage _storage = FirebaseStorage.instance;
 
   // Função para fazer upload de uma imagem e retornar a URL dela
   Future<String?> uploadReceipt(File imageFile, String userId) async {

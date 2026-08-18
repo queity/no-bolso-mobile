@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/auth_provider.dart';
 
 /// Tela inicial exibida enquanto verificamos o estado de autenticação.
 ///
-/// TODO: substituir a navegação automática abaixo por um redirect real
-/// baseado no estado do Firebase Auth (ver `AppRoutes` em `app_router.dart`):
-/// usuário logado -> `/dashboard`, deslogado -> `/login`.
-///
+/// Espera o [AuthProvider] terminar de checar a sessão salva do usuário
+/// (`isInitializing == false`) antes de navegar, em vez de um tempo fixo —
+/// senão um usuário já logado poderia ser mandado pro login por engano só
+/// porque o Firebase ainda não tinha respondido. Um atraso mínimo garante
+/// que a marca apareça mesmo quando o Firebase responde na hora.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -15,17 +19,35 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  static const _minimumSplashDuration = Duration(milliseconds: 600);
+
+  bool _minimumDelayElapsed = false;
+
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 900), () {
-      if (mounted) context.go('/login');
+    Future.delayed(_minimumSplashDuration, () {
+      if (!mounted) return;
+      setState(() => _minimumDelayElapsed = true);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+
+    // context.watch reconstrói esta tela sempre que o AuthProvider mudar
+    // (ex.: o Firebase termina de resolver a sessão salva).
+    final isInitializing = context.watch<AuthProvider>().isInitializing;
+
+    if (_minimumDelayElapsed && !isInitializing) {
+      // Sempre tenta ir pro dashboard: se o usuário não estiver autenticado,
+      // o `redirect` do GoRouter (em app_router.dart) intercepta e manda
+      // pro /login sozinho. Isso evita duplicar a checagem de isAuth aqui.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.go('/dashboard');
+      });
+    }
 
     return Scaffold(
       backgroundColor: colorScheme.surface,

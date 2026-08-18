@@ -1,6 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-// IMPORTANTE: Ajuste o caminho abaixo para onde o seu auth_service.dart está salvo
 import '../../data/firebase/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -34,40 +34,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _handleRegister() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      setState(() {
-        _isLoading = true;
-      });
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    setState(() => _isLoading = true);
+
+    try {
       // Chama a função de CRIAR CONTA que você fez no AuthService
-      final user = await _authService.signUp(
+      await _authService.signUp(
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (user == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Erro ao criar conta. O e-mail já pode estar em uso.',
-              ),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } else {
-        // Conta criada com sucesso! O Firebase já loga o usuário automaticamente.
-        // O seu AuthProvider vai perceber e atualizar o app inteiro.
-        if (mounted) {
-          context.go('/dashboard');
-        }
+      // Conta criada com sucesso! O Firebase já loga o usuário automaticamente.
+      // O seu AuthProvider vai perceber e atualizar o app inteiro.
+      if (mounted) context.go('/dashboard');
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_registerErrorMessage(e.code)),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Traduz os códigos de erro mais comuns do Firebase Auth pra mensagens
+  /// específicas, em vez de sempre culpar o e-mail já em uso.
+  String _registerErrorMessage(String code) {
+    switch (code) {
+      case 'email-already-in-use':
+        return 'Esse e-mail já está em uso.';
+      case 'invalid-email':
+        return 'E-mail inválido.';
+      case 'weak-password':
+        return 'Senha muito fraca. Use ao menos 6 caracteres.';
+      case 'network-request-failed':
+        return 'Sem conexão com a internet. Tente novamente.';
+      default:
+        return 'Erro ao criar conta. Tente novamente.';
     }
   }
 

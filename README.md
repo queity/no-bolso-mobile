@@ -149,3 +149,13 @@ O arquivo `lib/firebase_options.dart` (gerado pelo FlutterFire CLI) já está
 versionado no repositório — as chaves nele não são secretas, apenas
 identificam o projeto Firebase; a segurança real é garantida pelas regras do
 Firestore/Storage.
+
+### Regras de segurança
+
+Versionadas em `firestore.rules` e `storage.rules`: cada transação/recibo só
+pode ser lido, editado ou apagado pelo próprio dono, via `request.auth.uid`.
+
+- **Firestore**: regras deployadas no projeto **no-bolso-mobile**.
+- **Storage**: ainda não habilitado no console do Firebase, então as regras
+  de `storage.rules` ainda não foram deployadas. Assim que o Storage for
+  ativado, rodar `firebase deploy --only storage:rules`.

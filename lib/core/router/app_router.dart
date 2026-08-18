@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../screens/auth/login_screen.dart';
@@ -26,97 +25,108 @@ final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
 );
 
-/// Configuração central de navegação do app (go_router).
+/// Monta a configuração central de navegação do app (go_router).
+///
+/// Recebe o [authProvider] como parâmetro (em vez de usar um singleton
+/// global) pra poder ser reconstruído com uma instância diferente nos
+/// testes, sem depender do Firebase de verdade — quem chama (normalmente
+/// `main.dart`) é responsável por criar e compartilhar a mesma instância
+/// de [AuthProvider] usada no `MultiProvider`.
 ///
 /// O Dashboard e a listagem de Transações vivem dentro de um
 /// `StatefulShellRoute` com bottom navigation bar (ver `MainShell`) — o
 /// Dashboard é a tela principal do app, conforme os requisitos do desafio.
 /// As telas de Nova/Editar transação são empurradas por cima, fora da shell
 /// (sem bottom nav), usando `parentNavigatorKey`.
-///
-/// TODO: adicionar redirect com base no estado de autenticação
-/// (Firebase Auth) quando o fluxo de login estiver implementado.
-final GoRouter appRouter = GoRouter(
-  initialLocation: '/',
-  navigatorKey: _rootNavigatorKey,
+GoRouter buildAppRouter(AuthProvider authProvider) {
+  return GoRouter(
+    initialLocation: '/',
+    navigatorKey: _rootNavigatorKey,
 
-  redirect: (context, state) {
-    // Lê o estado global 
-    final isAuth = context.read<AuthProvider>().isAuth;
+    // Sem isso, o redirect só é reavaliado quando alguém navega
+    // explicitamente (context.go/push). Com isso, toda vez que o
+    // AuthProvider chamar notifyListeners() (ex.: o Firebase resolveu a
+    // sessão salva do usuário, ou um logout em outro dispositivo), o
+    // GoRouter reavalia o redirect sozinho, sem precisar de navegação manual.
+    refreshListenable: authProvider,
 
-    // Verifica em qual tela o usuário está tentando entrar
-    final isSplash = state.matchedLocation == '/';
-    final isAuthRoute =
-        state.matchedLocation == '/login' ||
-        state.matchedLocation == '/register';
+    redirect: (context, state) {
+      final isAuth = authProvider.isAuth;
 
-    // REGRA 1: Se NÃO está logado e tenta ir para qualquer lugar (exceto splash e login/registro)
-    if (!isAuth && !isSplash && !isAuthRoute) {
-      return '/login'; // <-- Redireciona o usuário para o login!
-    }
+      // Verifica em qual tela o usuário está tentando entrar
+      final isSplash = state.matchedLocation == '/';
+      final isAuthRoute =
+          state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register';
 
-    // REGRA 2: Se ESTÁ logado, não faz sentido ele conseguir acessar a tela de Login ou Criar Conta
-    if (isAuth && isAuthRoute) {
-      return '/dashboard'; // <-- Redireciona o usuário direto para o app!
-    }
+      // REGRA 1: Se NÃO está logado e tenta ir para qualquer lugar (exceto splash e login/registro)
+      if (!isAuth && !isSplash && !isAuthRoute) {
+        return '/login'; // <-- Redireciona o usuário para o login!
+      }
 
-    // REGRA 3: Se estiver tudo certo, permite a navegação normalmente
-    return null;
-  },
+      // REGRA 2: Se ESTÁ logado, não faz sentido ele conseguir acessar a tela de Login ou Criar Conta
+      if (isAuth && isAuthRoute) {
+        return '/dashboard'; // <-- Redireciona o usuário direto para o app!
+      }
 
-  routes: [
-    GoRoute(
-      path: '/',
-      name: AppRoutes.splash,
-      builder: (context, state) => const SplashScreen(),
-    ),
-    GoRoute(
-      path: '/login',
-      name: AppRoutes.login,
-      builder: (context, state) => const LoginScreen(),
-    ),
-    GoRoute(
-      path: '/register',
-      name: AppRoutes.register,
-      builder: (context, state) => const RegisterScreen(),
-    ),
-    StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) {
-        return MainShell(navigationShell: navigationShell);
-      },
-      branches: [
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/dashboard',
-              name: AppRoutes.dashboard,
-              builder: (context, state) => const DashboardScreen(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/transactions',
-              name: AppRoutes.transactions,
-              builder: (context, state) => const TransactionsListScreen(),
-            ),
-          ],
-        ),
-      ],
-    ),
-    GoRoute(
-      path: '/transactions/new',
-      name: AppRoutes.newTransaction,
-      parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const TransactionFormScreen(),
-    ),
-    GoRoute(
-      path: '/transactions/:id/edit',
-      name: AppRoutes.editTransaction,
-      parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) =>
-          TransactionFormScreen(transactionId: state.pathParameters['id']),
-    ),
-  ],
-);
+      // REGRA 3: Se estiver tudo certo, permite a navegação normalmente
+      return null;
+    },
+
+    routes: [
+      GoRoute(
+        path: '/',
+        name: AppRoutes.splash,
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/login',
+        name: AppRoutes.login,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        name: AppRoutes.register,
+        builder: (context, state) => const RegisterScreen(),
+      ),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return MainShell(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/dashboard',
+                name: AppRoutes.dashboard,
+                builder: (context, state) => const DashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/transactions',
+                name: AppRoutes.transactions,
+                builder: (context, state) => const TransactionsListScreen(),
+              ),
+            ],
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/transactions/new',
+        name: AppRoutes.newTransaction,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const TransactionFormScreen(),
+      ),
+      GoRoute(
+        path: '/transactions/:id/edit',
+        name: AppRoutes.editTransaction,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) =>
+            TransactionFormScreen(transactionId: state.pathParameters['id']),
+      ),
+    ],
+  );
+}

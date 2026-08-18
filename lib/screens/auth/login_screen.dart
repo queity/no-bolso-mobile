@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/firebase/auth_service.dart';
@@ -27,42 +28,56 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      // Muda a tela para o estado de "carregando"
-      setState(() {
-        _isLoading = true;
-      });
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    setState(() => _isLoading = true);
+
+    try {
       // Chama o Firebase passando o e-mail e senha digitados
-      final user = await _authService.signIn(
+      await _authService.signIn(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
-      // Tira o "carregando" da tela
-      setState(() {
-        _isLoading = false;
-      });
-
-      // Se o usuário for nulo, deu erro (senha errada, não existe, etc.)
-      if (user == null) {
-        // O "if (mounted)" é uma regra do Flutter. Sempre que usamos o "context"
-        // depois de um "await", precisamos verificar se a tela ainda existe.
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('E-mail ou senha incorretos. Tente novamente!'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } else {
-        // Sucesso! O usuário existe. O AuthProvider que envolvemos no main.dart
-        // já percebeu o login, mas navegamos à força por segurança.
-        if (mounted) {
-          context.go('/dashboard');
-        }
+      // Sucesso! O AuthProvider que envolvemos no main.dart já percebeu o
+      // login, mas navegamos à força por segurança.
+      if (mounted) context.go('/dashboard');
+    } on FirebaseAuthException catch (e) {
+      // O "if (mounted)" é uma regra do Flutter. Sempre que usamos o
+      // "context" depois de um "await", precisamos verificar se a tela
+      // ainda existe.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_loginErrorMessage(e.code)),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Traduz os códigos de erro mais comuns do Firebase Auth pra mensagens
+  /// específicas, em vez de mostrar sempre "e-mail ou senha incorretos"
+  /// mesmo quando o problema é outro (sem internet, conta desativada etc.).
+  String _loginErrorMessage(String code) {
+    switch (code) {
+      case 'user-not-found':
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'E-mail ou senha incorretos.';
+      case 'invalid-email':
+        return 'E-mail inválido.';
+      case 'user-disabled':
+        return 'Essa conta foi desativada.';
+      case 'network-request-failed':
+        return 'Sem conexão com a internet. Tente novamente.';
+      case 'too-many-requests':
+        return 'Muitas tentativas. Aguarde um pouco e tente de novo.';
+      default:
+        return 'Não foi possível entrar. Tente novamente.';
     }
   }
 
@@ -164,16 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          // TODO: fluxo de recuperação de senha.
-                        },
-                        child: const Text('Esqueci minha senha'),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 24),
                     ElevatedButton(
                       // Se estiver carregando, passamos null para desabilitar o clique
                       onPressed: _isLoading ? null : _handleLogin,

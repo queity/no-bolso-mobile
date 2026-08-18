@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TransactionService {
-  // Pega a instância do Firestore
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  // `late` pra não tocar o Firebase na hora de criar o TransactionService
+  // (ex.: em testes de widget que só montam a tela) — só acessa de verdade
+  // quando um dos métodos abaixo é chamado.
+  late final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   // 1. Adicionar uma nova transação
   Future<void> addTransaction(Map<String, dynamic> transactionData) async {

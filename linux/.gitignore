@@ -1,1 +1,7 @@
 flutter/ephemeral
+
+# Gerado automaticamente pelo `flutter pub get`, a partir dos plugins do
+# pubspec.yaml — mesmo padrão do GeneratedPluginRegistrant.java (Android) e
+# Runner/GeneratedPluginRegistrant.* (iOS).
+flutter/generated_plugin_registrant.*
+flutter/generated_plugins.cmake

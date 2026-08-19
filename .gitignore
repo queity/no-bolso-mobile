@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Memoria de projeto do Claude — mantida só local, fora do versionamento
+CLAUDE.md

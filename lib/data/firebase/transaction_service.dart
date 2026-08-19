@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show DateTimeRange;
+
+import '../../models/transaction.dart';
 
 class TransactionService {
   // `late` pra não tocar o Firebase na hora de criar o TransactionService
@@ -74,6 +77,69 @@ class TransactionService {
       await _collection.doc(transactionId).update(transactionData);
     } catch (e) {
       debugPrint("Erro ao atualizar transação: $e");
+      rethrow;
+    }
+  }
+
+  // 6. Buscar uma PÁGINA de transações, com filtros (usado pela listagem).
+  //
+  // Diferente de `getUserTransactions`, aqui é uma busca única (`.get()`,
+  // não `.snapshots()`) — é o que permite paginar por cursor
+  // (`startAfterDocument`). Isso tem um custo: a página já carregada não se
+  // atualiza sozinha se o dado mudar no servidor; quem chama deve dar um
+  // "puxar para atualizar" ou recarregar a primeira página quando precisar
+  // de dados frescos.
+  //
+  // `dateRange` e `category` são opcionais — quando nenhum dos dois é
+  // informado, a query é equivalente à de `getUserTransactions` (só que
+  // paginada). Quando os dois são informados juntos, o Firestore exige um
+  // índice composto (userId + category + date) — ver `firestore.indexes.json`.
+  Future<QuerySnapshot<Map<String, dynamic>>> getTransactionsPage({
+    required String userId,
+    int pageSize = 20,
+    DocumentSnapshot<Map<String, dynamic>>? startAfter,
+    DateTimeRange? dateRange,
+    TransactionCategory? category,
+  }) async {
+    try {
+      Query<Map<String, dynamic>> query = _collection.where(
+        'userId',
+        isEqualTo: userId,
+      );
+
+      if (category != null) {
+        query = query.where('category', isEqualTo: category.name);
+      }
+
+      if (dateRange != null) {
+        // `end` vem só com a data (00:00) — inclui o dia inteiro somando
+        // quase 24h, senão transações do próprio dia final ficariam de fora.
+        final inclusiveEnd = DateTime(
+          dateRange.end.year,
+          dateRange.end.month,
+          dateRange.end.day,
+          23,
+          59,
+          59,
+          999,
+        );
+        query = query
+            .where(
+              'date',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(dateRange.start),
+            )
+            .where('date', isLessThanOrEqualTo: Timestamp.fromDate(inclusiveEnd));
+      }
+
+      query = query.orderBy('date', descending: true).limit(pageSize);
+
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      return await query.get();
+    } catch (e) {
+      debugPrint("Erro ao buscar página de transações: $e");
       rethrow;
     }
   }

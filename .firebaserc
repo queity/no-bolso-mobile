@@ -2,6 +2,14 @@
   "projects": {
     "default": "no-bolso-mobile"
   },
-  "targets": {},
+  "targets": {
+    "no-bolso-mobile": {
+      "storage": {
+        "default": [
+          "no-bolso-mobile.firebasestorage.app"
+        ]
+      }
+    }
+  },
   "etags": {}
 }

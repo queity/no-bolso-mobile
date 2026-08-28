@@ -21,8 +21,8 @@ class _BalanceSummary extends StatelessWidget {
           Text(currency.format(income - expenses), style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: colors.onPrimary, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
           Row(children: [
-            Expanded(child: _Metric(icon: Icons.arrow_downward_rounded, label: 'Entradas', value: currency.format(income), color: colors.onPrimary)),
-            Expanded(child: _Metric(icon: Icons.arrow_upward_rounded, label: 'Despesas', value: currency.format(expenses), color: colors.onPrimary)),
+            Expanded(child: _Metric(icon: Icons.arrow_upward_rounded, label: 'Entradas', value: currency.format(income), color: colors.onPrimary)),
+            Expanded(child: _Metric(icon: Icons.arrow_downward_rounded, label: 'Despesas', value: currency.format(expenses), color: colors.onPrimary)),
           ]),
         ]),
       ),

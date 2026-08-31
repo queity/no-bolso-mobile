@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 import 'core/router/app_router.dart';
@@ -11,6 +12,7 @@ import 'providers/auth_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await initializeDateFormatting('pt_BR');
 
   // Uma única instância de AuthProvider, compartilhada entre o
   // MultiProvider (lida/observada pelas telas) e o GoRouter (dispara o

@@ -13,6 +13,24 @@ banco de dados (Cloud Firestore) e armazenamento de arquivos (Firebase Storage).
 - **go_router** — navegação
 - **provider** — gerenciamento de estado
 - **Firebase**: `firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_storage`
+- **fl_chart** — gráficos do dashboard
+- **image_picker** — captura/seleção da foto do recibo
+- **intl** — formatação de datas e moeda (pt_BR)
+
+## Dependências
+
+Todas declaradas em `pubspec.yaml`, instaladas com `flutter pub get`:
+
+| Pacote | Uso |
+|---|---|
+| `go_router` | navegação e rotas (bottom nav, telas empilhadas) |
+| `provider` | estado global (sessão do usuário) |
+| `firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_storage` | conexão com o Firebase |
+| `fl_chart` | gráficos de evolução e categorias do dashboard |
+| `image_picker` | anexar foto do recibo (câmera/galeria) |
+| `intl` | formatação de datas e valores monetários |
+| `cupertino_icons` | ícones estilo iOS |
+| `flutter_lints` (dev) | regras de lint do projeto |
 
 ## Estrutura do projeto
 
@@ -25,16 +43,22 @@ lib/
 │   └── theme/                   # tema do app
 ├── data/
 │   └── firebase/                # serviços de acesso ao Firebase (Auth, Firestore, Storage)
-├── models/                      # modelos de dados (ex.: Transaction, User)
+├── models/                      # modelos de dados (ex.: Transaction)
 ├── providers/                   # ChangeNotifiers / gerenciamento de estado global
 ├── screens/
 │   ├── splash/                  # tela inicial / verificação de autenticação
-│   ├── auth/                    # login
-│   ├── dashboard/                # gráficos e análises financeiras
+│   ├── auth/                    # login e cadastro
+│   ├── dashboard/                # tela principal: resumo, gráficos (fl_chart) e recentes
+│   │   ├── dashboard_screen.dart      # estado da tela (período, seções visíveis)
+│   │   ├── dashboard_header.dart      # saudação + logout
+│   │   ├── dashboard_controls.dart    # seletor de período e personalização
+│   │   ├── dashboard_summary.dart     # saldo/entradas/despesas do período
+│   │   ├── dashboard_charts.dart      # gráfico de evolução e de categorias
+│   │   └── dashboard_transactions.dart # lista de movimentações recentes
 │   ├── transactions/
-│   │   ├── list/                 # listagem de transações (filtros, paginação)
-│   │   └── form/                 # adicionar/editar transação
-└── widgets/                     # componentes reutilizáveis
+│   │   ├── list/                 # listagem paginada (Firestore) com filtro por categoria e período
+│   │   └── form/                 # adicionar/editar transação, com upload de recibo
+└── widgets/                     # componentes reutilizáveis (ex.: ReceiptPicker)
 ```
 
 ## Rotas
@@ -47,6 +71,7 @@ tela principal do app. As telas de Nova/Editar transação abrem por cima, sem a
 |---|---|
 | `/` | Splash |
 | `/login` | Login |
+| `/register` | Cadastro |
 | `/dashboard` | Dashboard (aba) |
 | `/transactions` | Listagem de transações (aba) |
 | `/transactions/new` | Nova transação |
@@ -156,6 +181,8 @@ Versionadas em `firestore.rules` e `storage.rules`: cada transação/recibo só
 pode ser lido, editado ou apagado pelo próprio dono, via `request.auth.uid`.
 
 - **Firestore**: regras deployadas no projeto **no-bolso-mobile**.
-- **Storage**: ainda não habilitado no console do Firebase, então as regras
-  de `storage.rules` ainda não foram deployadas. Assim que o Storage for
-  ativado, rodar `firebase deploy --only storage:rules`.
+- **Storage**: habilitado (plano Blaze) e com as regras de `storage.rules`
+  deployadas. Requer um target de deploy configurado (`firebase.json` já
+  aponta pro target `default`; se precisar reconfigurar em outra máquina,
+  rodar `firebase target:apply storage default no-bolso-mobile.firebasestorage.app`
+  antes do primeiro `firebase deploy --only storage`).

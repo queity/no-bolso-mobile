@@ -17,7 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
 
-  // 2. Instanciando o serviço 
+  // 2. Instanciando o serviço
   final AuthService _authService = AuthService();
 
   @override
@@ -100,17 +100,30 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const SizedBox(height: 32),
                     Container(
-                      width: 72,
+                      width: 160,
                       height: 72,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Icon(
-                        Icons.account_balance_wallet_rounded,
-                        size: 36,
-                        color: colorScheme.onPrimaryContainer,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.account_balance_wallet_rounded,
+                            size: 30,
+                            color: colorScheme.onPrimaryContainer,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'No Bolso',
+                            style: textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -207,7 +220,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             // Navega para a tela de registro
                             context.push('/register');
                           },
-                          child: const Text('Criar conta'),
+                          child: const Text(
+                            'Criar conta',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
                     ),

@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 /// semânticas de receita/despesa.
 abstract class AppColors {
   /// Cor semente usada para gerar toda a paleta Material 3 (light/dark).
-  static const seed = Color(0xFF2E7D32);
+  static const seed = Color(0xFF171717);
 
   // Cores semânticas — tema claro.
   static const income = Color(0xFF2E7D32);

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/financial_colors.dart';
 import '../../data/firebase/transaction_service.dart';
 import '../../models/transaction.dart';
 import '../../providers/auth_provider.dart';
@@ -47,7 +48,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (context.mounted) context.go('/login');
   }
 
-  List<TransactionModel> _filterTransactions(List<TransactionModel> transactions) {
+  List<TransactionModel> _filterTransactions(
+    List<TransactionModel> transactions,
+  ) {
     if (_selectedPeriod == _DashboardPeriod.all) return transactions;
 
     final now = DateTime.now();
@@ -81,7 +84,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           return SafeArea(
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * 0.8,
+              ),
               child: SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -89,15 +94,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Personalizar dashboard', style: Theme.of(context).textTheme.titleLarge),
+                      Text(
+                        'Personalizar dashboard',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
                       const SizedBox(height: 4),
                       Text('Escolha o que deseja acompanhar na tela.'),
                       const SizedBox(height: 8),
-                      _SectionCheckbox(icon: Icons.bar_chart_rounded, title: 'Entradas x despesas', value: selectedSections.contains(_DashboardSection.evolution), onChanged: () => toggle(_DashboardSection.evolution)),
-                      _SectionCheckbox(icon: Icons.pie_chart_outline_rounded, title: 'Despesas por categoria', value: selectedSections.contains(_DashboardSection.categories), onChanged: () => toggle(_DashboardSection.categories)),
-                      _SectionCheckbox(icon: Icons.receipt_long_rounded, title: 'Movimentações recentes', value: selectedSections.contains(_DashboardSection.recent), onChanged: () => toggle(_DashboardSection.recent)),
+                      _SectionCheckbox(
+                        icon: Icons.bar_chart_rounded,
+                        title: 'Entradas x despesas',
+                        value: selectedSections.contains(
+                          _DashboardSection.evolution,
+                        ),
+                        onChanged: () => toggle(_DashboardSection.evolution),
+                      ),
+                      _SectionCheckbox(
+                        icon: Icons.pie_chart_outline_rounded,
+                        title: 'Despesas por categoria',
+                        value: selectedSections.contains(
+                          _DashboardSection.categories,
+                        ),
+                        onChanged: () => toggle(_DashboardSection.categories),
+                      ),
+                      _SectionCheckbox(
+                        icon: Icons.receipt_long_rounded,
+                        title: 'Movimentações recentes',
+                        value: selectedSections.contains(
+                          _DashboardSection.recent,
+                        ),
+                        onChanged: () => toggle(_DashboardSection.recent),
+                      ),
                       const SizedBox(height: 8),
-                      SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(context, selectedSections), child: const Text('Aplicar'))),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () =>
+                              Navigator.pop(context, selectedSections),
+                          child: const Text('Aplicar'),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -133,40 +169,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
         stream: TransactionService().getUserTransactions(user.uid),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const _DashboardMessage(message: 'Não foi possível carregar seus dados.', icon: Icons.cloud_off_rounded);
+            return const _DashboardMessage(
+              message: 'Não foi possível carregar seus dados.',
+              icon: Icons.cloud_off_rounded,
+            );
           }
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
           final allTransactions = snapshot.data!.docs
-              .map((doc) => TransactionModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+              .map(
+                (doc) => TransactionModel.fromMap(
+                  doc.id,
+                  doc.data() as Map<String, dynamic>,
+                ),
+              )
               .toList();
           final transactions = _filterTransactions(allTransactions);
 
           return CustomScrollView(
             slivers: [
-              SliverToBoxAdapter(child: _DashboardHeader(firstName: firstName, greeting: _greeting, topPadding: topPadding, onLogout: () => _handleLogout(context))),
+              SliverToBoxAdapter(
+                child: _DashboardHeader(
+                  firstName: firstName,
+                  greeting: _greeting,
+                  topPadding: topPadding,
+                  onLogout: () => _handleLogout(context),
+                ),
+              ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    _PeriodSelector(selectedPeriod: _selectedPeriod, onChanged: (period) => setState(() => _selectedPeriod = period)),
+                    _PeriodSelector(
+                      selectedPeriod: _selectedPeriod,
+                      onChanged: (period) =>
+                          setState(() => _selectedPeriod = period),
+                    ),
                     const SizedBox(height: 10),
-                    OutlinedButton.icon(onPressed: () => _openSectionSettings(context), icon: const Icon(Icons.tune_rounded), label: const Text('Personalizar dashboard')),
+                    OutlinedButton.icon(
+                      onPressed: () => _openSectionSettings(context),
+                      icon: const Icon(Icons.tune_rounded),
+                      label: const Text('Personalizar dashboard'),
+                    ),
                     const SizedBox(height: 16),
                     _BalanceSummary(transactions: transactions),
                     const SizedBox(height: 20),
-                    if (_visibleSections.contains(_DashboardSection.evolution)) ...[
+                    if (_visibleSections.contains(
+                      _DashboardSection.evolution,
+                    )) ...[
                       const _SectionTitle(title: 'Entradas x despesas'),
                       const SizedBox(height: 10),
-                      _EvolutionChart(transactions: transactions, period: _selectedPeriod),
+                      _EvolutionChart(
+                        transactions: transactions,
+                        period: _selectedPeriod,
+                      ),
                       const SizedBox(height: 20),
                     ],
-                    if (_visibleSections.contains(_DashboardSection.categories)) ...[
+                    if (_visibleSections.contains(
+                      _DashboardSection.categories,
+                    )) ...[
                       const _SectionTitle(title: 'Despesas por categoria'),
                       const SizedBox(height: 10),
                       _CategoryChart(transactions: transactions),
                       const SizedBox(height: 20),
                     ],
-                    if (_visibleSections.contains(_DashboardSection.recent)) ...[
+                    if (_visibleSections.contains(
+                      _DashboardSection.recent,
+                    )) ...[
                       const _SectionTitle(title: 'Movimentações recentes'),
                       const SizedBox(height: 10),
                       _RecentTransactions(transactions: transactions),

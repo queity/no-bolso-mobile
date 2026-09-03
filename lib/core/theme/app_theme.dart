@@ -10,9 +10,12 @@ abstract class AppTheme {
     // O `primary` derivado automaticamente pelo ColorScheme.fromSeed fica
     // desaturado demais para texto (ex.: TextButton). Fixamos ele na cor de
     // marca de verdade pra ficar mais legível/evidente.
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.seed,
-    ).copyWith(primary: AppColors.seed);
+    final colorScheme = ColorScheme.fromSeed(seedColor: AppColors.seed)
+        .copyWith(
+          primary: AppColors.seed,
+          primaryContainer: AppColors.seed,
+          onPrimaryContainer: Colors.white,
+        );
 
     return ThemeData(
       useMaterial3: true,

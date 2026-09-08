@@ -220,12 +220,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             // Navega para a tela de registro
                             context.push('/register');
                           },
+                          // Sem cor fixa: usa o `foregroundColor` do
+                          // TextButtonTheme (colorScheme.primary), que já
+                          // se adapta entre os temas claro e escuro.
                           child: const Text(
                             'Criar conta',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],

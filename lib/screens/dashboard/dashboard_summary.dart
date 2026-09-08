@@ -15,20 +15,28 @@ class _BalanceSummary extends StatelessWidget {
     final currency = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$ ');
     final colors = Theme.of(context).colorScheme;
     final financial = Theme.of(context).extension<FinancialColors>()!;
+    // Fundo neutro (não `colors.primary`): no tema escuro o `primary` do app
+    // é fixado na mesma cor de `financial.income` (ver AppTheme.dark), então
+    // um card com fundo `primary` deixava o texto de "Entradas" invisível —
+    // texto verde sobre fundo verde. `inverseSurface`/`onInverseSurface` já
+    // vêm com contraste garantido pelo Material 3 nos dois temas.
     return Card(
       margin: EdgeInsets.zero,
-      color: colors.primary,
+      color: colors.inverseSurface,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Saldo acumulado', style: TextStyle(color: colors.onPrimary)),
+            Text(
+              'Saldo acumulado',
+              style: TextStyle(color: colors.onInverseSurface),
+            ),
             const SizedBox(height: 4),
             Text(
               currency.format(income - expenses),
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: colors.onPrimary,
+                color: colors.onInverseSurface,
                 fontWeight: FontWeight.bold,
               ),
             ),

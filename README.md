@@ -32,33 +32,54 @@ Todas declaradas em `pubspec.yaml`, instaladas com `flutter pub get`:
 | `cupertino_icons` | ícones estilo iOS |
 | `flutter_lints` (dev) | regras de lint do projeto |
 
-## Estrutura do projeto
+## Arquitetura e estrutura do projeto
+
+O código segue **Clean Architecture** organizada **por feature**. Cada feature
+tem três camadas, e a dependência só aponta para dentro:
+
+```
+presentation  ──►  domain  ◄──  data
+(telas, Provider)  (regras, Dart puro)  (Firebase)
+```
+
+- **domain**: entidades, interfaces de repositório e casos de uso. Dart puro,
+  sem Flutter nem Firebase.
+- **data**: datasources (falam com o Firebase), DTOs (convertem documento ↔
+  entidade) e as implementações dos repositórios.
+- **presentation**: telas, widgets e providers. Usam apenas as interfaces do
+  domínio, obtidas via `context.read<...>()`.
+
+As implementações concretas são ligadas às interfaces em um único lugar,
+`core/di/app_dependencies.dart`. Nos testes, basta trocar por fakes.
 
 ```
 lib/
-├── main.dart                    # entrypoint, inicializa o Firebase e o app
-├── firebase_options.dart        # gerado pelo `flutterfire configure`
+├── main.dart                         # entrypoint: Firebase + injeção de dependências
+├── firebase_options.dart             # gerado pelo `flutterfire configure`
 ├── core/
-│   ├── router/                  # configuração de rotas (go_router) + bottom nav (MainShell)
-│   └── theme/                   # tema do app
-├── data/
-│   └── firebase/                # serviços de acesso ao Firebase (Auth, Firestore, Storage)
-├── models/                      # modelos de dados (ex.: Transaction)
-├── providers/                   # ChangeNotifiers / gerenciamento de estado global
-├── screens/
-│   ├── splash/                  # tela inicial / verificação de autenticação
-│   ├── auth/                    # login e cadastro
-│   ├── dashboard/                # tela principal: resumo, gráficos (fl_chart) e recentes
-│   │   ├── dashboard_screen.dart      # estado da tela (período, seções visíveis)
-│   │   ├── dashboard_header.dart      # saudação + logout
-│   │   ├── dashboard_controls.dart    # seletor de período e personalização
-│   │   ├── dashboard_summary.dart     # saldo/entradas/despesas do período
-│   │   ├── dashboard_charts.dart      # gráfico de evolução e de categorias
-│   │   └── dashboard_transactions.dart # lista de movimentações recentes
-│   ├── transactions/
-│   │   ├── list/                 # listagem paginada (Firestore) com filtro por categoria e período
-│   │   └── form/                 # adicionar/editar transação, com upload de recibo
-└── widgets/                     # componentes reutilizáveis (ex.: ReceiptPicker)
+│   ├── di/app_dependencies.dart      # composição: interfaces → implementações Firebase
+│   ├── router/                       # go_router + bottom nav (MainShell)
+│   └── theme/                        # tema do app
+└── features/
+    ├── auth/
+    │   ├── domain/                   # AppUser, AuthRepository, AuthException
+    │   ├── data/                     # FirebaseAuthDatasource, AuthRepositoryImpl
+    │   └── presentation/             # AuthProvider, login e cadastro
+    ├── transactions/
+    │   ├── domain/
+    │   │   ├── entities/             # Transaction (+ enums), TransactionPage, TransactionFilter
+    │   │   ├── repositories/         # TransactionRepository, ReceiptRepository
+    │   │   └── usecases/             # SaveTransaction (upload do recibo + gravação + limpeza)
+    │   ├── data/
+    │   │   ├── datasources/          # Firestore e Storage
+    │   │   ├── models/               # TransactionDto (Timestamp, códigos legados)
+    │   │   └── repositories/         # TransactionRepositoryImpl, ReceiptRepositoryImpl
+    │   └── presentation/
+    │       ├── screens/list/         # listagem paginada com filtros
+    │       ├── screens/form/         # adicionar/editar, com recibo
+    │       └── widgets/              # ReceiptPicker
+    ├── dashboard/presentation/       # resumo, gráficos (fl_chart) e recentes
+    └── splash/presentation/          # verificação de sessão
 ```
 
 ## Rotas

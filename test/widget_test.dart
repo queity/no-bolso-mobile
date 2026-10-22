@@ -1,14 +1,12 @@
-// `firebase_auth` também exporta uma classe chamada `AuthProvider` (base
-// pra EmailAuthProvider, GoogleAuthProvider etc.) — escondemos ela aqui pra
-// não colidir com o nosso `AuthProvider` (o ChangeNotifier do app).
-import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:no_bolso_mobile/core/router/app_router.dart';
+import 'package:no_bolso_mobile/features/auth/presentation/providers/auth_provider.dart';
 import 'package:no_bolso_mobile/main.dart';
-import 'package:no_bolso_mobile/providers/auth_provider.dart';
+
+import 'fakes/fake_auth_repository.dart';
 
 void main() {
   testWidgets('App inicializa e mostra a splash screen', (
@@ -16,9 +14,7 @@ void main() {
   ) async {
     // Stream vazio: nunca emite um usuário, então o AuthProvider fica
     // "deslogado" sem precisar inicializar o Firebase de verdade no teste.
-    final authProvider = AuthProvider(
-      authStateChanges: const Stream<User?>.empty(),
-    );
+    final authProvider = AuthProvider(FakeAuthRepository());
     addTearDown(authProvider.dispose);
 
     await tester.pumpWidget(

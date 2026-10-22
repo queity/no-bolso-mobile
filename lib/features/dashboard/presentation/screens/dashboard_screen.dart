@@ -175,8 +175,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: Icons.cloud_off_rounded,
             );
           }
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           final transactions = _filterTransactions(snapshot.data!);
 
           return CustomScrollView(

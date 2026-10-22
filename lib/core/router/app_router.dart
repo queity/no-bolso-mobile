@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../providers/auth_provider.dart';
-import '../../screens/auth/login_screen.dart';
-import '../../screens/auth/register_screen.dart';
-import '../../screens/dashboard/dashboard_screen.dart';
-import '../../screens/splash/splash_screen.dart';
-import '../../screens/transactions/form/transaction_form_screen.dart';
-import '../../screens/transactions/list/transactions_list_screen.dart';
+import '../../features/auth/presentation/providers/auth_provider.dart';
+import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
+import '../../features/splash/presentation/screens/splash_screen.dart';
+import '../../features/transactions/presentation/screens/form/transaction_form_screen.dart';
+import '../../features/transactions/presentation/screens/list/transactions_list_screen.dart';
 import 'main_shell.dart';
 
 /// Nomes de rota centralizados para evitar strings soltas pelo app.
@@ -31,7 +31,7 @@ final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
 /// global) pra poder ser reconstruído com uma instância diferente nos
 /// testes, sem depender do Firebase de verdade — quem chama (normalmente
 /// `main.dart`) é responsável por criar e compartilhar a mesma instância
-/// de [AuthProvider] usada no `MultiProvider`.
+/// de [AuthProvider] usada no `MultiProvider` (ver `AppDependencies`).
 ///
 /// O Dashboard e a listagem de Transações vivem dentro de um
 /// `StatefulShellRoute` com bottom navigation bar (ver `MainShell`) — o

@@ -4,25 +4,22 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
+import 'core/di/app_dependencies.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
-import 'providers/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await initializeDateFormatting('pt_BR');
 
-  // Uma única instância de AuthProvider, compartilhada entre o
-  // MultiProvider (lida/observada pelas telas) e o GoRouter (dispara o
-  // redirect sozinho quando o estado de autenticação muda).
-  final authProvider = AuthProvider();
+  final dependencies = AppDependencies.firebase();
 
   runApp(
-    ChangeNotifierProvider.value(
-      value: authProvider,
-      child: MyApp(router: buildAppRouter(authProvider)),
+    MultiProvider(
+      providers: dependencies.providers,
+      child: MyApp(router: buildAppRouter(dependencies.authProvider)),
     ),
   );
 }

@@ -3,23 +3,20 @@ part of 'dashboard_screen.dart';
 class _PeriodSelector extends StatelessWidget {
   const _PeriodSelector({required this.selectedPeriod, required this.onChanged});
 
-  final _DashboardPeriod selectedPeriod;
-  final ValueChanged<_DashboardPeriod> onChanged;
+  final DashboardPeriod selectedPeriod;
+  final ValueChanged<DashboardPeriod> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<_DashboardPeriod>(
+    return DropdownButtonFormField<DashboardPeriod>(
       initialValue: selectedPeriod,
       decoration: const InputDecoration(
         labelText: 'Período do dashboard',
         prefixIcon: Icon(Icons.calendar_month_rounded),
       ),
-      items: const [
-        DropdownMenuItem(value: _DashboardPeriod.week, child: Text('Semanal')),
-        DropdownMenuItem(value: _DashboardPeriod.month, child: Text('1 mês')),
-        DropdownMenuItem(value: _DashboardPeriod.threeMonths, child: Text('3 meses')),
-        DropdownMenuItem(value: _DashboardPeriod.sixMonths, child: Text('6 meses')),
-        DropdownMenuItem(value: _DashboardPeriod.all, child: Text('Todos')),
+      items: [
+        for (final period in DashboardPeriod.values)
+          DropdownMenuItem(value: period, child: Text(period.label)),
       ],
       onChanged: (period) {
         if (period != null) onChanged(period);

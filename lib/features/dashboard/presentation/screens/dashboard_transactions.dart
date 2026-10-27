@@ -33,10 +33,21 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _DashboardMessage extends StatelessWidget {
-  const _DashboardMessage({required this.message, required this.icon});
+  const _DashboardMessage({required this.message, required this.icon, this.onRetry});
   final String message;
   final IconData icon;
 
+  /// Quando informado, mostra o botão "Tentar novamente".
+  final VoidCallback? onRetry;
+
   @override
-  Widget build(BuildContext context) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, size: 30, color: Theme.of(context).colorScheme.outline), const SizedBox(height: 8), Text(message, textAlign: TextAlign.center)]));
+  Widget build(BuildContext context) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(icon, size: 30, color: Theme.of(context).colorScheme.outline),
+        const SizedBox(height: 8),
+        Text(message, textAlign: TextAlign.center),
+        if (onRetry != null) ...[
+          const SizedBox(height: 8),
+          TextButton(onPressed: onRetry, child: const Text('Tentar novamente')),
+        ],
+      ]));
 }

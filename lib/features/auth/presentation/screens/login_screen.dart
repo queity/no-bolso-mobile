@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/errors/auth_exception.dart';
-import '../../domain/repositories/auth_repository.dart';
+import '../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -34,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       // Chama o Firebase passando o e-mail e senha digitados
-      await context.read<AuthRepository>().signIn(
+      await context.read<AuthProvider>().signIn(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );

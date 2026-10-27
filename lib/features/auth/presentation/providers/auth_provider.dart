@@ -7,18 +7,21 @@ import '../../domain/repositories/auth_repository.dart';
 
 /// Estado global de autenticação.
 ///
-/// O ChangeNotifier avisa quem estiver "ouvindo" (telas e o GoRouter) quando
-/// o usuário loga ou desloga. Depende só do [AuthRepository] — nos testes,
-/// basta passar um repositório fake, sem inicializar o Firebase.
+/// O ChangeNotifier avisa quem estiver "ouvindo" (telas, GoRouter e o
+/// `TransactionsProvider`) quando o usuário loga ou desloga. As telas também
+/// fazem login, cadastro e logout por aqui, sem conhecer o repositório.
+///
+/// Depende só do [AuthRepository] — nos testes, basta um repositório fake.
 class AuthProvider extends ChangeNotifier {
-  AuthProvider(AuthRepository repository) {
-    _subscription = repository.authStateChanges().listen((AppUser? newUser) {
+  AuthProvider(this._repository) {
+    _subscription = _repository.authStateChanges().listen((AppUser? newUser) {
       _user = newUser;
       _isInitializing = false;
       notifyListeners(); // "TELA, SE ATUALIZE! O USUÁRIO MUDOU!"
     });
   }
 
+  final AuthRepository _repository;
   AppUser? _user;
   late final StreamSubscription<AppUser?> _subscription;
 
@@ -31,6 +34,25 @@ class AuthProvider extends ChangeNotifier {
   AppUser? get user => _user;
   bool get isAuth => _user != null;
   bool get isInitializing => _isInitializing;
+
+  /// Lança `AuthException` em caso de erro. O estado ([user]) é atualizado
+  /// pelo stream de sessão, não pelo retorno.
+  Future<void> signIn({required String email, required String password}) {
+    return _repository.signIn(email: email, password: password);
+  }
+
+  /// Lança `AuthException` em caso de erro.
+  Future<void> signUp({
+    required String name,
+    required String email,
+    required String password,
+  }) {
+    return _repository.signUp(name: name, email: email, password: password);
+  }
+
+  /// Ao sair, o stream de sessão emite `null`, o GoRouter manda pro login e
+  /// o `TransactionsProvider` descarta os dados do usuário.
+  Future<void> signOut() => _repository.signOut();
 
   @override
   void dispose() {

@@ -75,12 +75,41 @@ lib/
     │   │   ├── models/               # TransactionDto (Timestamp, códigos legados)
     │   │   └── repositories/         # TransactionRepositoryImpl, ReceiptRepositoryImpl
     │   └── presentation/
+    │       ├── providers/            # TransactionsProvider, TransactionListProvider
     │       ├── screens/list/         # listagem paginada com filtros
     │       ├── screens/form/         # adicionar/editar, com recibo
     │       └── widgets/              # ReceiptPicker
-    ├── dashboard/presentation/       # resumo, gráficos (fl_chart) e recentes
+    ├── dashboard/
+    │   ├── domain/                   # DashboardPeriod, DashboardSummary (cálculos puros)
+    │   └── presentation/             # resumo, gráficos (fl_chart) e recentes
     └── splash/presentation/          # verificação de sessão
 ```
+
+## Gerenciamento de estado
+
+O estado global fica em três `ChangeNotifier`s com `provider`, montados em
+`core/di/app_dependencies.dart` e encadeados por `ChangeNotifierProxyProvider`:
+
+```
+AuthProvider ──► TransactionsProvider ──► TransactionListProvider
+ (sessão)         (tempo real + resumos)    (listagem paginada + filtros)
+```
+
+- **`AuthProvider`**: sessão do usuário, login, cadastro e logout. Também é o
+  `refreshListenable` do GoRouter.
+- **`TransactionsProvider`**: uma única assinatura em tempo real das
+  transações do usuário logado, trocada no login e descartada no logout.
+  Faz criar, editar e excluir (via caso de uso `SaveTransaction`) e calcula os
+  resumos do Dashboard (`DashboardSummary`), guardando o resultado em memória
+  até os dados mudarem.
+- **`TransactionListProvider`**: páginas carregadas, cursor e filtros da
+  tela de Transações. Recarrega sozinho quando o `TransactionsProvider`
+  muda (`revision`), então criar ou editar uma transação atualiza Dashboard e
+  listagem ao mesmo tempo.
+
+As telas usam `context.select` para reconstruir só quando o valor que exibem
+muda. Os cálculos do Dashboard ficam no domínio (`features/dashboard/domain`)
+e são testados sem Flutter nem Firebase.
 
 ## Rotas
 

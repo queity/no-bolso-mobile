@@ -10,8 +10,7 @@ import 'package:provider/provider.dart';
 import '../../../../../core/theme/financial_colors.dart';
 import '../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../domain/entities/transaction.dart';
-import '../../../domain/repositories/transaction_repository.dart';
-import '../../../domain/usecases/save_transaction.dart';
+import '../../providers/transactions_provider.dart';
 import '../../widgets/receipt_picker.dart';
 
 /// Tela de Adicionar/Editar Transação.
@@ -96,8 +95,11 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     });
 
     try {
+      // Usa a transação que já está em memória no provider (aberta pela
+      // lista ou pelo dashboard); só vai ao banco quando a tela foi aberta
+      // direto por link.
       final transaction = await context
-          .read<TransactionRepository>()
+          .read<TransactionsProvider>()
           .getById(widget.transactionId!);
 
       if (!mounted) return;
@@ -217,7 +219,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final userId = context.read<AuthProvider>().user?.id;
-    final saveTransaction = context.read<SaveTransaction>();
+    final transactionsProvider = context.read<TransactionsProvider>();
     if (userId == null) {
       _showError('Sua sessão expirou. Entre novamente.');
       return;
@@ -244,8 +246,10 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       );
 
       // Upload do recibo, gravação e limpeza do recibo antigo — a ordem
-      // desses passos é regra de negócio e mora no caso de uso.
-      await saveTransaction(
+      // desses passos é regra de negócio e mora no caso de uso
+      // `SaveTransaction`, chamado pelo provider. Dashboard e listagem se
+      // atualizam sozinhos quando a mudança volta pelo stream.
+      await transactionsProvider.save(
         transaction,
         newReceiptPath: _pickedReceipt?.path,
         previousReceiptUrl: _originalReceiptUrl,

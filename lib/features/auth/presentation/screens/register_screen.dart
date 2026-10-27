@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/errors/auth_exception.dart';
-import '../../domain/repositories/auth_repository.dart';
+import '../providers/auth_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -40,8 +40,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Chama a função de CRIAR CONTA do AuthRepository
-      await context.read<AuthRepository>().signUp(
+      // Chama a função de CRIAR CONTA do AuthProvider
+      await context.read<AuthProvider>().signUp(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),

@@ -1,17 +1,14 @@
 part of 'dashboard_screen.dart';
 
 class _BalanceSummary extends StatelessWidget {
-  const _BalanceSummary({required this.transactions});
-  final List<Transaction> transactions;
+  const _BalanceSummary({required this.summary});
+  final DashboardSummary summary;
 
   @override
   Widget build(BuildContext context) {
-    final income = transactions
-        .where((item) => item.isIncome)
-        .fold<double>(0, (total, item) => total + item.amount);
-    final expenses = transactions
-        .where((item) => !item.isIncome)
-        .fold<double>(0, (total, item) => total + item.amount);
+    // Os totais já vêm calculados do TransactionsProvider.
+    final income = summary.income;
+    final expenses = summary.expenses;
     final currency = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$ ');
     final colors = Theme.of(context).colorScheme;
     final financial = Theme.of(context).extension<FinancialColors>()!;
@@ -34,7 +31,7 @@ class _BalanceSummary extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              currency.format(income - expenses),
+              currency.format(summary.balance),
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: colors.onInverseSurface,
                 fontWeight: FontWeight.bold,

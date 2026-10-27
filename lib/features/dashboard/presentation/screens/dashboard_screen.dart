@@ -5,10 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/financial_colors.dart';
-import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../transactions/domain/entities/transaction.dart';
-import '../../../transactions/domain/repositories/transaction_repository.dart';
+import '../../../transactions/presentation/providers/transactions_provider.dart';
+import '../../domain/entities/dashboard_period.dart';
+import '../../domain/entities/dashboard_summary.dart';
 
 part 'dashboard_header.dart';
 part 'dashboard_controls.dart';
@@ -23,12 +24,10 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-enum _DashboardPeriod { week, month, threeMonths, sixMonths, all }
-
 enum _DashboardSection { evolution, categories, recent }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  _DashboardPeriod _selectedPeriod = _DashboardPeriod.month;
+  DashboardPeriod _selectedPeriod = DashboardPeriod.month;
   final Set<_DashboardSection> _visibleSections = {
     _DashboardSection.evolution,
     _DashboardSection.categories,
@@ -43,25 +42,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
-    await context.read<AuthRepository>().signOut();
+    await context.read<AuthProvider>().signOut();
     if (context.mounted) context.go('/login');
-  }
-
-  List<Transaction> _filterTransactions(
-    List<Transaction> transactions,
-  ) {
-    if (_selectedPeriod == _DashboardPeriod.all) return transactions;
-
-    final now = DateTime.now();
-    final start = switch (_selectedPeriod) {
-      _DashboardPeriod.week => DateTime(now.year, now.month, now.day - 6),
-      _DashboardPeriod.month => DateTime(now.year, now.month),
-      _DashboardPeriod.threeMonths => DateTime(now.year, now.month - 2),
-      _DashboardPeriod.sixMonths => DateTime(now.year, now.month - 5),
-      _DashboardPeriod.all => DateTime(2000),
-    };
-
-    return transactions.where((item) => !item.date.isBefore(start)).toList();
   }
 
   Future<void> _openSectionSettings(BuildContext context) async {
@@ -154,31 +136,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
+    // `context.select` em vez de `context.watch`: a tela só reconstrói quando
+    // o valor selecionado muda, não a cada notifyListeners dos providers.
+    final isAuth = context.select<AuthProvider, bool>((auth) => auth.isAuth);
+    final firstName = context.select<AuthProvider, String>(
+      (auth) => auth.user?.firstName ?? 'Usuário',
+    );
+    final isLoading = context.select<TransactionsProvider, bool>(
+      (provider) => provider.isLoading,
+    );
+    final hasError = context.select<TransactionsProvider, bool>(
+      (provider) => provider.hasError,
+    );
+    // O provider devolve a mesma instância enquanto os dados e o período não
+    // mudam, então trocar de aba e voltar não recalcula nada.
+    final summary = context.select<TransactionsProvider, DashboardSummary>(
+      (provider) => provider.summaryFor(_selectedPeriod),
+    );
     final colors = Theme.of(context).colorScheme;
     final topPadding = MediaQuery.of(context).padding.top;
-    final firstName = user?.firstName ?? 'Usuário';
-    if (user == null) {
+
+    if (!isAuth) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
       backgroundColor: colors.surface,
-      // TODO(etapa 2): mover para o TransactionsProvider. Do jeito que está,
-      // cada rebuild desta tela cria uma nova assinatura no Firestore.
-      body: StreamBuilder<List<Transaction>>(
-        stream: context.read<TransactionRepository>().watchAll(user.id),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const _DashboardMessage(
+      body: Builder(
+        builder: (context) {
+          if (hasError) {
+            return _DashboardMessage(
               message: 'Não foi possível carregar seus dados.',
               icon: Icons.cloud_off_rounded,
+              onRetry: context.read<TransactionsProvider>().retry,
             );
           }
-          if (!snapshot.hasData) {
+          if (isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
-          final transactions = _filterTransactions(snapshot.data!);
 
           return CustomScrollView(
             slivers: [
@@ -206,17 +201,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       label: const Text('Personalizar dashboard'),
                     ),
                     const SizedBox(height: 16),
-                    _BalanceSummary(transactions: transactions),
+                    _BalanceSummary(summary: summary),
                     const SizedBox(height: 20),
                     if (_visibleSections.contains(
                       _DashboardSection.evolution,
                     )) ...[
                       const _SectionTitle(title: 'Entradas x despesas'),
                       const SizedBox(height: 10),
-                      _EvolutionChart(
-                        transactions: transactions,
-                        period: _selectedPeriod,
-                      ),
+                      _EvolutionChart(summary: summary),
                       const SizedBox(height: 20),
                     ],
                     if (_visibleSections.contains(
@@ -224,7 +216,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     )) ...[
                       const _SectionTitle(title: 'Despesas por categoria'),
                       const SizedBox(height: 10),
-                      _CategoryChart(transactions: transactions),
+                      _CategoryChart(totals: summary.expensesByCategory),
                       const SizedBox(height: 20),
                     ],
                     if (_visibleSections.contains(
@@ -232,7 +224,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     )) ...[
                       const _SectionTitle(title: 'Movimentações recentes'),
                       const SizedBox(height: 10),
-                      _RecentTransactions(transactions: transactions),
+                      _RecentTransactions(transactions: summary.recent),
                     ],
                   ]),
                 ),

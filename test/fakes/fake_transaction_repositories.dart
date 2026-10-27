@@ -1,13 +1,32 @@
+import 'dart:async';
+
 import 'package:no_bolso_mobile/features/transactions/domain/entities/transaction.dart';
 import 'package:no_bolso_mobile/features/transactions/domain/entities/transaction_page.dart';
 import 'package:no_bolso_mobile/features/transactions/domain/repositories/receipt_repository.dart';
 import 'package:no_bolso_mobile/features/transactions/domain/repositories/transaction_repository.dart';
 
 /// [TransactionRepository] em memória para testes.
+///
+/// - [emit] / [emitError] simulam o stream em tempo real do `watchAll`.
+/// - [pages] é a fila de respostas do `getPage` (vazia = página vazia), e
+///   [pageCalls] registra os parâmetros de cada chamada.
 class FakeTransactionRepository implements TransactionRepository {
   final List<Transaction> added = [];
   final List<Transaction> updated = [];
   final List<String> deleted = [];
+
+  final List<String> watchedUserIds = [];
+  StreamController<List<Transaction>>? _watchController;
+
+  final List<TransactionPage> pages = [];
+  final List<({String userId, Object? after, TransactionFilter filter})>
+  pageCalls = [];
+
+  final Map<String, Transaction> byId = {};
+  int getByIdCalls = 0;
+
+  void emit(List<Transaction> items) => _watchController!.add(items);
+  void emitError(Object error) => _watchController!.addError(error);
 
   @override
   Future<void> add(Transaction transaction) async => added.add(transaction);
@@ -20,7 +39,10 @@ class FakeTransactionRepository implements TransactionRepository {
   Future<void> delete(String id) async => deleted.add(id);
 
   @override
-  Future<Transaction?> getById(String id) async => null;
+  Future<Transaction?> getById(String id) async {
+    getByIdCalls++;
+    return byId[id];
+  }
 
   @override
   Future<TransactionPage> getPage({
@@ -28,10 +50,19 @@ class FakeTransactionRepository implements TransactionRepository {
     int pageSize = 20,
     Object? after,
     TransactionFilter filter = const TransactionFilter(),
-  }) async => const TransactionPage(items: [], hasMore: false);
+  }) async {
+    pageCalls.add((userId: userId, after: after, filter: filter));
+    if (pages.isEmpty) return const TransactionPage(items: [], hasMore: false);
+    return pages.removeAt(0);
+  }
 
   @override
-  Stream<List<Transaction>> watchAll(String userId) => Stream.value(const []);
+  Stream<List<Transaction>> watchAll(String userId) {
+    watchedUserIds.add(userId);
+    _watchController?.close();
+    _watchController = StreamController<List<Transaction>>();
+    return _watchController!.stream;
+  }
 }
 
 /// [ReceiptRepository] em memória. Guarda o que foi enviado e apagado, e

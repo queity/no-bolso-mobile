@@ -5,17 +5,15 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../../core/theme/financial_colors.dart';
-import '../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../domain/entities/transaction.dart';
-import '../../../domain/entities/transaction_page.dart';
-import '../../../domain/repositories/transaction_repository.dart';
+import '../../providers/transaction_list_provider.dart';
 
 /// Listagem de transações do usuário logado.
 ///
-/// Busca por página (`TransactionRepository.getPage`) em vez de
-/// tempo real: permite paginar por cursor com filtros de categoria e
-/// período. Puxar para atualizar (ou voltar de criar/editar uma transação)
-/// recarrega a primeira página do zero.
+/// O estado (páginas carregadas, filtros, carregando/erro) fica no
+/// [TransactionListProvider]; esta tela só desenha e repassa as ações. A
+/// lista se atualiza sozinha quando uma transação é criada, editada ou
+/// excluída — não precisa recarregar ao voltar do formulário.
 class TransactionsListScreen extends StatefulWidget {
   const TransactionsListScreen({super.key});
 
@@ -25,8 +23,6 @@ class TransactionsListScreen extends StatefulWidget {
 }
 
 class _TransactionsListScreenState extends State<TransactionsListScreen> {
-  static const _pageSize = 20;
-
   final ScrollController _scrollController = ScrollController();
 
   static final _dateFormat = DateFormat('dd/MM/yyyy');
@@ -36,27 +32,12 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     decimalDigits: 2,
   );
 
-  final List<Transaction> _transactions = [];
-
-  /// Cursor opaco da última página carregada (vem do repositório).
-  Object? _cursor;
-  bool _hasMore = true;
-
-  bool _isLoadingFirstPage = true;
-  bool _isLoadingMore = false;
-  String? _loadError;
-
-  TransactionCategory? _selectedCategory;
-  DateTimeRange? _selectedDateRange;
-
-  bool get _hasActiveFilters =>
-      _selectedCategory != null || _selectedDateRange != null;
+  TransactionListProvider get _list => context.read<TransactionListProvider>();
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _loadFirstPage();
   }
 
   @override
@@ -67,7 +48,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
   }
 
   void _onScroll() {
-    if (!_hasMore || _isLoadingMore || _isLoadingFirstPage) return;
+    final list = _list;
+    if (!list.hasMore || list.isLoadingMore || list.isLoadingFirstPage) return;
 
     // Dispara a próxima página um pouco antes do fim do scroll, pra dar
     // tempo da busca terminar antes do usuário realmente bater no fundo.
@@ -78,86 +60,13 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     }
   }
 
-  String? get _userId => context.read<AuthProvider>().user?.id;
-
-  TransactionRepository get _repository =>
-      context.read<TransactionRepository>();
-
-  TransactionFilter get _filter => TransactionFilter(
-    category: _selectedCategory,
-    startDate: _selectedDateRange?.start,
-    endDate: _selectedDateRange?.end,
-  );
-
-  Future<void> _loadFirstPage() async {
-    final userId = _userId;
-    if (userId == null) return;
-
-    setState(() {
-      _isLoadingFirstPage = true;
-      _loadError = null;
-    });
-
-    try {
-      final page = await _repository.getPage(
-        userId: userId,
-        pageSize: _pageSize,
-        filter: _filter,
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _transactions
-          ..clear()
-          ..addAll(page.items);
-        _cursor = page.cursor;
-        _hasMore = page.hasMore;
-        _isLoadingFirstPage = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isLoadingFirstPage = false;
-        // Em debug, mostra o erro de verdade (ex.: link do Firestore pra
-        // criar um índice ausente) em vez de só a mensagem genérica — é bem
-        // mais rápido de diagnosticar do que garimpar no terminal. Some
-        // sozinho em release (kDebugMode).
-        _loadError = kDebugMode
-            ? 'Não foi possível carregar as transações.\n\n[debug] $e'
-            : 'Não foi possível carregar as transações. Tente de novo.';
-      });
-    }
-  }
-
   Future<void> _loadNextPage() async {
-    final userId = _userId;
-    if (userId == null || _cursor == null) return;
-
-    setState(() => _isLoadingMore = true);
-
     try {
-      final page = await _repository.getPage(
-        userId: userId,
-        pageSize: _pageSize,
-        after: _cursor,
-        filter: _filter,
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _transactions.addAll(page.items);
-        _cursor = page.cursor;
-        _hasMore = page.hasMore;
-        _isLoadingMore = false;
-      });
-    } catch (e) {
+      await _list.loadNextPage();
+    } catch (_) {
       // Falha ao carregar mais uma página não derruba a lista que já estava
-      // na tela — só avisa e deixa o usuário tentar rolar de novo (ou puxar
-      // pra atualizar) em vez de perder o que já tinha carregado.
+      // na tela — só avisa e deixa o usuário tentar rolar de novo.
       if (!mounted) return;
-      setState(() => _isLoadingMore = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Não foi possível carregar mais transações.'),
@@ -167,12 +76,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     }
   }
 
-  Future<void> _applyCategory(TransactionCategory? category) async {
-    setState(() => _selectedCategory = category);
-    await _loadFirstPage();
-  }
-
   Future<void> _pickDateRange() async {
+    final list = _list;
     final now = DateTime.now();
     final selected = await showDateRangePicker(
       context: context,
@@ -180,27 +85,21 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       // datas futuras, começando em 2000.
       firstDate: DateTime(2000),
       lastDate: now,
-      initialDateRange: _selectedDateRange,
+      initialDateRange: list.hasDateRange
+          ? DateTimeRange(start: list.startDate!, end: list.endDate!)
+          : null,
     );
 
     if (selected == null || !mounted) return;
-    setState(() => _selectedDateRange = selected);
-    await _loadFirstPage();
-  }
-
-  Future<void> _clearFilters() async {
-    setState(() {
-      _selectedCategory = null;
-      _selectedDateRange = null;
-    });
-    await _loadFirstPage();
+    await list.setDateRange(selected.start, selected.end);
   }
 
   Future<void> _openCategoryPicker() async {
+    final list = _list;
     final result = await showModalBottomSheet<Object?>(
       context: context,
       showDragHandle: true,
-      builder: (context) => _CategoryPickerSheet(selected: _selectedCategory),
+      builder: (context) => _CategoryPickerSheet(selected: list.category),
     );
 
     // Fechar arrastando/tocando fora (sem escolher nada) também devolve
@@ -211,24 +110,25 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     // escolher" (que deve manter o filtro como estava).
     if (result == null) return;
     if (result == _CategoryPickerSheet.allCategories) {
-      await _applyCategory(null);
+      await list.setCategory(null);
       return;
     }
-    await _applyCategory(result as TransactionCategory);
+    await list.setCategory(result as TransactionCategory);
   }
 
-  Future<void> _openTransaction(String route) async {
-    // `context.push` retorna um Future que completa quando a tela empurrada
-    // é fechada — usado aqui pra recarregar a lista ao voltar de criar ou
-    // editar uma transação, sem precisar de um `ChangeNotifier` novo.
-    await context.push(route);
-    if (mounted) _loadFirstPage();
+  /// Em debug, mostra o erro de verdade (ex.: link do Firestore pra criar um
+  /// índice ausente) em vez de só a mensagem genérica. Some em release.
+  String _errorMessage(Object error) {
+    return kDebugMode
+        ? 'Não foi possível carregar as transações.\n\n[debug] $error'
+        : 'Não foi possível carregar as transações. Tente de novo.';
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final list = context.watch<TransactionListProvider>();
 
     return Scaffold(
       body: SafeArea(
@@ -259,46 +159,52 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
               ),
             ),
             _FilterBar(
-              selectedCategory: _selectedCategory,
-              selectedDateRange: _selectedDateRange,
-              hasActiveFilters: _hasActiveFilters,
+              selectedCategory: list.category,
+              selectedDateRange: list.hasDateRange
+                  ? DateTimeRange(start: list.startDate!, end: list.endDate!)
+                  : null,
+              hasActiveFilters: list.hasActiveFilters,
               onCategoryTap: _openCategoryPicker,
               onDateRangeTap: _pickDateRange,
-              onClearTap: _clearFilters,
+              onClearTap: list.clearFilters,
             ),
-            Expanded(child: _buildBody()),
+            Expanded(child: _buildBody(list)),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openTransaction('/transactions/new'),
+        onPressed: () => context.push('/transactions/new'),
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoadingFirstPage) {
+  Widget _buildBody(TransactionListProvider list) {
+    if (list.isLoadingFirstPage) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_loadError != null) {
-      return _ErrorState(message: _loadError!, onRetry: _loadFirstPage);
+    if (list.error != null) {
+      return _ErrorState(
+        message: _errorMessage(list.error!),
+        onRetry: list.loadFirstPage,
+      );
     }
 
-    if (_transactions.isEmpty) {
-      return _EmptyState(hasActiveFilters: _hasActiveFilters);
+    final transactions = list.items;
+    if (transactions.isEmpty) {
+      return _EmptyState(hasActiveFilters: list.hasActiveFilters);
     }
 
     return RefreshIndicator(
-      onRefresh: _loadFirstPage,
+      onRefresh: list.refresh,
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 96),
-        itemCount: _transactions.length + (_hasMore ? 1 : 0),
+        itemCount: transactions.length + (list.hasMore ? 1 : 0),
         separatorBuilder: (context, index) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
-          if (index >= _transactions.length) {
+          if (index >= transactions.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Center(
@@ -311,13 +217,12 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
             );
           }
 
-          final transaction = _transactions[index];
+          final transaction = transactions[index];
           return _TransactionTile(
             transaction: transaction,
             dateFormat: _dateFormat,
             currencyFormat: _currencyFormat,
-            onTap: () =>
-                _openTransaction('/transactions/${transaction.id}/edit'),
+            onTap: () => context.push('/transactions/${transaction.id}/edit'),
           );
         },
       ),

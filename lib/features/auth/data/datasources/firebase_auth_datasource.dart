@@ -12,7 +12,11 @@ class FirebaseAuthDatasource {
   // `late` pra não tocar o Firebase ao montar telas em testes de widget.
   late final FirebaseAuth _auth = _authOverride ?? FirebaseAuth.instance;
 
-  Stream<User?> authStateChanges() => _auth.authStateChanges();
+  /// Usa `userChanges()` e não `authStateChanges()`: o segundo só avisa
+  /// login e logout, e no cadastro o nome é salvo *depois* do login
+  /// automático — o app ficava mostrando "Usuário" até reabrir.
+  /// `userChanges()` também avisa atualizações de perfil (como o nome).
+  Stream<User?> authStateChanges() => _auth.userChanges();
 
   Future<User?> signIn(String email, String password) async {
     final result = await _auth.signInWithEmailAndPassword(

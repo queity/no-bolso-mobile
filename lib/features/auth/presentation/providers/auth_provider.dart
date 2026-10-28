@@ -42,12 +42,24 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Lança `AuthException` em caso de erro.
+  ///
+  /// O stream de sessão emite o usuário assim que a conta é criada, ainda
+  /// sem o nome. Por isso, ao terminar, já atualiza com o usuário completo
+  /// devolvido pelo cadastro, sem depender do próximo evento do stream.
   Future<void> signUp({
     required String name,
     required String email,
     required String password,
-  }) {
-    return _repository.signUp(name: name, email: email, password: password);
+  }) async {
+    final created = await _repository.signUp(
+      name: name,
+      email: email,
+      password: password,
+    );
+    if (created != null && created.id == _user?.id) {
+      _user = created;
+      notifyListeners();
+    }
   }
 
   /// Ao sair, o stream de sessão emite `null`, o GoRouter manda pro login e

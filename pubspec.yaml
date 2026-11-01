@@ -51,6 +51,7 @@ dependencies:
   intl: ^0.20.3
   image_picker: ^1.2.3
   fl_chart: ^0.70.2
+  rxdart: 0.28.0
 
 dev_dependencies:
   flutter_test:

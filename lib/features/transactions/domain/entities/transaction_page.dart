@@ -1,22 +1,8 @@
 import 'transaction.dart';
 
-/// Filtros opcionais da listagem paginada.
-///
-/// Usa `DateTime` puro em vez do `DateTimeRange` do Flutter pra manter o
-/// domínio livre de dependências de UI — a tela faz a conversão.
-class TransactionFilter {
-  const TransactionFilter({this.category, this.startDate, this.endDate});
-
-  final TransactionCategory? category;
-
-  /// Início do período (inclusivo).
-  final DateTime? startDate;
-
-  /// Fim do período. Só a data importa: o dia inteiro é incluído.
-  final DateTime? endDate;
-
-  bool get hasDateRange => startDate != null && endDate != null;
-}
+// O filtro mudou para o próprio arquivo. O export mantém os imports atuais
+// funcionando até a paginação por cursor ser removida.
+export 'transaction_filter.dart';
 
 /// Uma página da listagem de transações.
 class TransactionPage {

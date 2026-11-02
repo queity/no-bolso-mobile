@@ -34,6 +34,8 @@ class TransactionFirestoreDatasource {
   }
 
   // Tempo real: se mudar algo no banco, quem escuta recebe a lista nova.
+  // `userId ==` + `orderBy('date')` exige o índice composto userId + date
+  // (ver firestore.indexes.json) — sem ele o Firestore recusa a consulta.
   Stream<QuerySnapshot<Map<String, dynamic>>> watchByUser(String userId) {
     return _collection
         .where('userId', isEqualTo: userId)
@@ -67,62 +69,6 @@ class TransactionFirestoreDatasource {
       await _collection.doc(id).update(data);
     } catch (e) {
       debugPrint("Erro ao atualizar transação: $e");
-      rethrow;
-    }
-  }
-
-  /// Busca uma PÁGINA de transações, com filtros (usado pela listagem).
-  ///
-  /// Busca única (`.get()`, não `.snapshots()`) — é o que permite paginar por
-  /// cursor (`startAfterDocument`). A página já carregada não se atualiza
-  /// sozinha se o dado mudar no servidor.
-  ///
-  /// Com `category` e período juntos, o Firestore exige um índice composto
-  /// (userId + category + date) — ver `firestore.indexes.json`.
-  Future<QuerySnapshot<Map<String, dynamic>>> getPage({
-    required String userId,
-    int pageSize = 20,
-    DocumentSnapshot<Map<String, dynamic>>? startAfter,
-    String? category,
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    try {
-      Query<Map<String, dynamic>> query = _collection.where(
-        'userId',
-        isEqualTo: userId,
-      );
-
-      if (category != null) {
-        query = query.where('category', isEqualTo: category);
-      }
-
-      if (startDate != null && endDate != null) {
-        // `endDate` vem só com a data (00:00) — inclui o dia inteiro, senão
-        // transações do próprio dia final ficariam de fora.
-        final inclusiveEnd = DateTime(
-          endDate.year,
-          endDate.month,
-          endDate.day,
-          23,
-          59,
-          59,
-          999,
-        );
-        query = query
-            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-            .where('date', isLessThanOrEqualTo: Timestamp.fromDate(inclusiveEnd));
-      }
-
-      query = query.orderBy('date', descending: true).limit(pageSize);
-
-      if (startAfter != null) {
-        query = query.startAfterDocument(startAfter);
-      }
-
-      return await query.get();
-    } catch (e) {
-      debugPrint("Erro ao buscar página de transações: $e");
       rethrow;
     }
   }

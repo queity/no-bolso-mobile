@@ -7,13 +7,15 @@ import 'package:provider/provider.dart';
 import '../../../../../core/theme/financial_colors.dart';
 import '../../../domain/entities/transaction.dart';
 import '../../providers/transaction_list_provider.dart';
+import '../../providers/transactions_provider.dart';
 
 /// Listagem de transações do usuário logado.
 ///
-/// O estado (páginas carregadas, filtros, carregando/erro) fica no
-/// [TransactionListProvider]; esta tela só desenha e repassa as ações. A
-/// lista se atualiza sozinha quando uma transação é criada, editada ou
-/// excluída — não precisa recarregar ao voltar do formulário.
+/// Busca, filtros e quantos itens mostrar ficam no [TransactionListProvider]
+/// (reativo, com rxdart); carregando e erro vêm do [TransactionsProvider].
+/// Esta tela só desenha e repassa as ações. A lista se atualiza sozinha
+/// quando uma transação é criada, editada ou excluída — não precisa
+/// recarregar ao voltar do formulário.
 class TransactionsListScreen extends StatefulWidget {
   const TransactionsListScreen({super.key});
 
@@ -24,6 +26,10 @@ class TransactionsListScreen extends StatefulWidget {
 
 class _TransactionsListScreenState extends State<TransactionsListScreen> {
   final ScrollController _scrollController = ScrollController();
+
+  /// Texto do campo de busca. É da tela (o provider só recebe cada tecla),
+  /// por isso o "Limpar" precisa zerar os dois.
+  final TextEditingController _searchController = TextEditingController();
 
   static final _dateFormat = DateFormat('dd/MM/yyyy');
   static final _currencyFormat = NumberFormat.currency(
@@ -44,36 +50,26 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _onScroll() {
     final list = _list;
-    if (!list.hasMore || list.isLoadingMore || list.isLoadingFirstPage) return;
+    if (!list.hasMore) return;
 
-    // Dispara a próxima página um pouco antes do fim do scroll, pra dar
-    // tempo da busca terminar antes do usuário realmente bater no fundo.
+    // Mostra mais itens um pouco antes do fim do scroll. Os dados já estão
+    // em memória, então é instantâneo e não tem como falhar.
     const threshold = 300.0;
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - threshold) {
-      _loadNextPage();
+      list.loadMore();
     }
   }
 
-  Future<void> _loadNextPage() async {
-    try {
-      await _list.loadNextPage();
-    } catch (_) {
-      // Falha ao carregar mais uma página não derruba a lista que já estava
-      // na tela — só avisa e deixa o usuário tentar rolar de novo.
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível carregar mais transações.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  void _clearFilters() {
+    _searchController.clear();
+    _list.clearFilters();
   }
 
   Future<void> _pickDateRange() async {
@@ -91,7 +87,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     );
 
     if (selected == null || !mounted) return;
-    await list.setDateRange(selected.start, selected.end);
+    list.setDateRange(selected.start, selected.end);
   }
 
   Future<void> _openCategoryPicker() async {
@@ -110,10 +106,10 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     // escolher" (que deve manter o filtro como estava).
     if (result == null) return;
     if (result == _CategoryPickerSheet.allCategories) {
-      await list.setCategory(null);
+      list.setCategory(null);
       return;
     }
-    await list.setCategory(result as TransactionCategory);
+    list.setCategory(result as TransactionCategory);
   }
 
   /// Em debug, mostra o erro de verdade (ex.: link do Firestore pra criar um
@@ -129,6 +125,12 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final list = context.watch<TransactionListProvider>();
+    final isLoading = context.select<TransactionsProvider, bool>(
+      (provider) => provider.isLoading,
+    );
+    final error = context.select<TransactionsProvider, Object?>(
+      (provider) => provider.error,
+    );
 
     return Scaffold(
       body: SafeArea(
@@ -158,6 +160,10 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                 ],
               ),
             ),
+            _SearchField(
+              controller: _searchController,
+              onChanged: list.setQuery,
+            ),
             _FilterBar(
               selectedCategory: list.category,
               selectedDateRange: list.hasDateRange
@@ -166,9 +172,11 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
               hasActiveFilters: list.hasActiveFilters,
               onCategoryTap: _openCategoryPicker,
               onDateRangeTap: _pickDateRange,
-              onClearTap: list.clearFilters,
+              onClearTap: _clearFilters,
             ),
-            Expanded(child: _buildBody(list)),
+            Expanded(
+              child: _buildBody(list, isLoading: isLoading, error: error),
+            ),
           ],
         ),
       ),
@@ -179,44 +187,43 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     );
   }
 
-  Widget _buildBody(TransactionListProvider list) {
-    if (list.isLoadingFirstPage) {
+  Widget _buildBody(
+    TransactionListProvider list, {
+    required bool isLoading,
+    required Object? error,
+  }) {
+    final transactions = list.items;
+
+    // Só troca a lista pelo carregando/erro quando não há nada pra mostrar
+    // (primeira carga, troca de usuário). Num "puxar para atualizar", o que
+    // já estava na tela continua lá.
+    if (isLoading && transactions.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (list.error != null) {
+    if (error != null && transactions.isEmpty) {
       return _ErrorState(
-        message: _errorMessage(list.error!),
-        onRetry: list.loadFirstPage,
+        message: _errorMessage(error),
+        onRetry: context.read<TransactionsProvider>().retry,
       );
     }
 
-    final transactions = list.items;
     if (transactions.isEmpty) {
-      return _EmptyState(hasActiveFilters: list.hasActiveFilters);
+      return _EmptyState(
+        hasActiveFilters: list.hasActiveFilters,
+        query: list.hasQuery ? _searchController.text.trim() : null,
+      );
     }
 
     return RefreshIndicator(
-      onRefresh: list.refresh,
+      // Assina o stream de novo; o indicador some quando a resposta chega.
+      onRefresh: context.read<TransactionsProvider>().refresh,
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 96),
-        itemCount: transactions.length + (list.hasMore ? 1 : 0),
+        itemCount: transactions.length,
         separatorBuilder: (context, index) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
-          if (index >= transactions.length) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(
-                child: SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            );
-          }
-
           final transaction = transactions[index];
           return _TransactionTile(
             transaction: transaction,
@@ -230,8 +237,48 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
   }
 }
 
+/// Campo de busca por descrição. Repassa cada tecla ao provider — quem
+/// espera o usuário parar de digitar (debounce) é o pipeline rxdart do
+/// [TransactionListProvider].
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.controller, required this.onChanged});
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+      // Reconstrói só o campo (não a tela) pra mostrar/esconder o "x".
+      child: ValueListenableBuilder<TextEditingValue>(
+        valueListenable: controller,
+        builder: (context, value, _) => TextField(
+          controller: controller,
+          onChanged: onChanged,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            hintText: 'Buscar na descrição',
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: value.text.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Limpar busca',
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () {
+                      controller.clear();
+                      onChanged('');
+                    },
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Linha de filtros: chips de categoria/período + limpar, logo abaixo do
-/// cabeçalho da tela.
+/// campo de busca.
 class _FilterBar extends StatelessWidget {
   const _FilterBar({
     required this.selectedCategory,
@@ -443,12 +490,13 @@ class _TransactionTile extends StatelessWidget {
   }
 }
 
-/// Mostrado quando a busca (primeira página ou "tentar novamente") falha.
+/// Mostrado quando o stream de transações falha antes de trazer qualquer
+/// dado.
 class _ErrorState extends StatelessWidget {
   const _ErrorState({required this.message, required this.onRetry});
 
   final String message;
-  final Future<void> Function() onRetry;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -476,7 +524,7 @@ class _ErrorState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             TextButton(
-              onPressed: () => onRetry(),
+              onPressed: onRetry,
               child: const Text('Tentar novamente'),
             ),
           ],
@@ -486,12 +534,14 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-/// Mostrado quando a busca funcionou mas não há nenhuma transação (com ou
-/// sem filtro aplicado).
+/// Mostrado quando não há nenhuma transação (com ou sem filtro aplicado).
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.hasActiveFilters});
+  const _EmptyState({required this.hasActiveFilters, this.query});
 
   final bool hasActiveFilters;
+
+  /// Texto buscado, como o usuário digitou. Nulo quando não há busca.
+  final String? query;
 
   @override
   Widget build(BuildContext context) {
@@ -511,7 +561,9 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              hasActiveFilters
+              query != null
+                  ? 'Nenhuma transação encontrada para "$query".'
+                  : hasActiveFilters
                   ? 'Nenhuma transação encontrada para esse filtro.'
                   : 'Nenhuma transação encontrada.',
               style: textTheme.bodyMedium?.copyWith(

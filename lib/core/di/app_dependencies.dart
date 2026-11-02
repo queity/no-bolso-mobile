@@ -65,15 +65,15 @@ class AppDependencies {
           transactions!..bindUser(auth.user?.id),
     ),
 
-    // Recarrega a listagem paginada quando as transações mudam.
-    ChangeNotifierProxyProvider2<
-      AuthProvider,
-      TransactionsProvider,
-      TransactionListProvider
-    >(
-      create: (_) => TransactionListProvider(transactionRepository),
-      update: (_, auth, transactions, list) =>
-          list!..sync(userId: auth.user?.id, revision: transactions.revision),
+    // Listagem reativa: combina o stream de transações do provider acima
+    // com a busca e os filtros (ver TransactionListProvider). Não precisa
+    // ouvir o TransactionsProvider — o stream já traz cada mudança. Do
+    // AuthProvider, só a troca de usuário (que zera busca e filtros).
+    ChangeNotifierProxyProvider<AuthProvider, TransactionListProvider>(
+      create: (context) => TransactionListProvider(
+        context.read<TransactionsProvider>().transactionsStream,
+      ),
+      update: (_, auth, list) => list!..bindUser(auth.user?.id),
     ),
   ];
 }

@@ -45,6 +45,7 @@ class TransactionsProvider extends ChangeNotifier {
   final BehaviorSubject<List<Transaction>> _transactionsSubject =
       BehaviorSubject<List<Transaction>>.seeded(const []);
   bool _isLoading = false;
+  bool _hasLoadedInitialData = false;
   Object? _error;
   int _revision = 0;
   bool _disposed = false;
@@ -71,6 +72,7 @@ class TransactionsProvider extends ChangeNotifier {
   Stream<List<Transaction>> get transactionsStream =>
       _transactionsSubject.stream;
   bool get isLoading => _isLoading;
+  bool get hasLoadedInitialData => _hasLoadedInitialData;
   bool get hasError => _error != null;
   Object? get error => _error;
   String? get userId => _userId;
@@ -94,6 +96,7 @@ class TransactionsProvider extends ChangeNotifier {
     _transactionsSubject.add(_transactions);
     _error = null;
     _isLoading = userId != null;
+    _hasLoadedInitialData = false;
     _revision++;
     _completeRefresh();
 
@@ -138,6 +141,7 @@ class TransactionsProvider extends ChangeNotifier {
           (items) {
             _transactions = List.unmodifiable(items);
             _isLoading = false;
+            _hasLoadedInitialData = true;
             _error = null;
             _revision++;
             _transactionsSubject.add(_transactions);
@@ -147,6 +151,7 @@ class TransactionsProvider extends ChangeNotifier {
           onError: (Object error) {
             debugPrint('Erro ao observar transações: $error');
             _isLoading = false;
+            _hasLoadedInitialData = true;
             _error = error;
             _completeRefresh();
             notifyListeners();

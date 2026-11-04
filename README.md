@@ -17,6 +17,7 @@ banco de dados (Cloud Firestore) e armazenamento de arquivos (Firebase Storage).
 - **Firebase**: `firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_storage`
 - **fl_chart** — gráficos do dashboard
 - **image_picker** — captura/seleção da foto do recibo
+- **cached_network_image** — cache local de recibos remotos
 - **intl** — formatação de datas e moeda (pt_BR)
 
 ## Dependências
@@ -31,6 +32,7 @@ Todas declaradas em `pubspec.yaml`, instaladas com `flutter pub get`:
 | `firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_storage` | conexão com o Firebase |
 | `fl_chart` | gráficos de evolução e categorias do dashboard |
 | `image_picker` | anexar foto do recibo (câmera/galeria) |
+| `cached_network_image` | cache e estados de carregamento de recibos remotos |
 | `intl` | formatação de datas e valores monetários |
 | `cupertino_icons` | ícones estilo iOS |
 | `flutter_lints` (dev) | regras de lint do projeto |
@@ -115,32 +117,27 @@ As telas usam `context.select` para reconstruir só quando o valor que exibem
 muda. Os cálculos do Dashboard ficam no domínio (`features/dashboard/domain`)
 e são testados sem Flutter nem Firebase.
 
-## Programação reativa
+### Performance e cache
 
-A tela de Transações é montada com **rxdart**, combinando três fontes num
-único resultado:
-
-```
-transactionsStream (BehaviorSubject) ───────────────────────────┐
-busca ── debounce(300ms) · normalize · startWith('') · distinct ─┼─► combineLatest3 ─► TransactionFilter.apply ─► lista
-filtros (categoria + período, sem debounce) ─────────────────────┘
-```
-
-- **Repositório expondo stream**: `TransactionRepository.watchAll` devolve
-  `Stream<List<Transaction>>` (Firestore em tempo real). O
-  `TransactionsProvider` mantém uma única assinatura e repassa os dados num
-  `BehaviorSubject` — quem assina recebe na hora a lista atual, e Dashboard e
-  listagem compartilham a mesma consulta.
-- **Busca com debounce**: o texto só é aplicado depois de 300 ms sem
-  digitar. Apagar a busca volta a lista na hora. A comparação ignora
-  maiúsculas e acentos ("almoco" encontra "Almoço") e exige todas as
-  palavras, em qualquer ordem. `distinct` descarta buscas equivalentes.
-- **`combineLatest`**: qualquer mudança — nos dados, na busca ou nos
-  filtros — refaz o filtro. Uma transação criada com a busca ativa já
-  aparece filtrada.
-- **Filtragem em memória**: o Firestore não faz busca por trecho de texto,
-  então a regra mora no domínio (`TransactionFilter`, Dart puro e testado).
-  A rolagem mostra 20 itens por vez sobre o resultado já filtrado.
+- No Android e iOS, o `main.dart` configura explicitamente o cache persistente
+  do Cloud Firestore com tamanho ilimitado. Assim, os dados já sincronizados
+  permanecem disponíveis entre execuções e podem ser lidos offline; gravações
+  feitas sem conexão são sincronizadas quando a rede voltar. O cache é local ao
+  dispositivo, não substitui as regras de segurança e não é configurado para
+  Web ou desktop.
+- Depois que o Firebase Auth confirma uma sessão, o `TransactionsProvider`
+  inicia uma única assinatura em tempo real. A Splash aguarda o primeiro
+  snapshot (inclusive quando ele vem do cache local) antes de abrir o
+  dashboard, evitando uma segunda consulta apenas para o pré-carregamento.
+- O provider central de transações é a única exceção intencional à criação
+  lazy: ele é montado cedo para iniciar o preload após a autenticação. O
+  provider da listagem paginada permanece lazy e só é criado ao acessar a aba.
+  Os gráficos usam `SliverChildBuilderDelegate` para serem construídos apenas
+  quando se aproximam da viewport. A personalização do dashboard continua
+  controlando quais seções existem.
+- Recibos escolhidos localmente usam `Image.file`; URLs do Storage usam
+  `CachedNetworkImage`, carregando sob demanda e reaproveitando o cache local
+  em visualizações futuras.
 
 ## Rotas
 

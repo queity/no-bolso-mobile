@@ -31,12 +31,14 @@ void main() {
   test('ao logar, carrega as transações do stream', () async {
     provider.bindUser('u1');
     expect(provider.isLoading, isTrue);
+    expect(provider.hasLoadedInitialData, isFalse);
 
     repository.emit([buildTx(id: 'a'), buildTx(id: 'b')]);
     await flush();
 
     expect(repository.watchedUserIds, ['u1']);
     expect(provider.isLoading, isFalse);
+    expect(provider.hasLoadedInitialData, isTrue);
     expect(provider.transactions.map((t) => t.id), ['a', 'b']);
   });
 
@@ -48,13 +50,16 @@ void main() {
     expect(repository.watchedUserIds, ['u1']);
   });
 
-  test('bindUser não notifica de forma síncrona (é chamado durante o build)', () async {
-    provider.bindUser('u1');
-    expect(notifications, 0);
+  test(
+    'bindUser não notifica de forma síncrona (é chamado durante o build)',
+    () async {
+      provider.bindUser('u1');
+      expect(notifications, 0);
 
-    await flush();
-    expect(notifications, 1);
-  });
+      await flush();
+      expect(notifications, 1);
+    },
+  );
 
   test('ao sair, descarta os dados do usuário anterior', () async {
     provider.bindUser('u1');
@@ -188,7 +193,10 @@ void main() {
     await flush();
 
     final first = provider.summaryFor(DashboardPeriod.month);
-    expect(identical(first, provider.summaryFor(DashboardPeriod.month)), isTrue);
+    expect(
+      identical(first, provider.summaryFor(DashboardPeriod.month)),
+      isTrue,
+    );
     expect(first.expenses, 10);
 
     repository.emit([buildTx(amount: 10), buildTx(amount: 5)]);

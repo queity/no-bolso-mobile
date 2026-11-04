@@ -188,45 +188,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                 sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    _PeriodSelector(
-                      selectedPeriod: _selectedPeriod,
-                      onChanged: (period) =>
-                          setState(() => _selectedPeriod = period),
-                    ),
-                    const SizedBox(height: 10),
-                    OutlinedButton.icon(
-                      onPressed: () => _openSectionSettings(context),
-                      icon: const Icon(Icons.tune_rounded),
-                      label: const Text('Personalizar dashboard'),
-                    ),
-                    const SizedBox(height: 16),
-                    _BalanceSummary(summary: summary),
-                    const SizedBox(height: 20),
-                    if (_visibleSections.contains(
-                      _DashboardSection.evolution,
-                    )) ...[
-                      const _SectionTitle(title: 'Entradas x despesas'),
-                      const SizedBox(height: 10),
-                      _EvolutionChart(summary: summary),
-                      const SizedBox(height: 20),
-                    ],
-                    if (_visibleSections.contains(
-                      _DashboardSection.categories,
-                    )) ...[
-                      const _SectionTitle(title: 'Despesas por categoria'),
-                      const SizedBox(height: 10),
-                      _CategoryChart(totals: summary.expensesByCategory),
-                      const SizedBox(height: 20),
-                    ],
-                    if (_visibleSections.contains(
-                      _DashboardSection.recent,
-                    )) ...[
-                      const _SectionTitle(title: 'Movimentações recentes'),
-                      const SizedBox(height: 10),
-                      _RecentTransactions(transactions: summary.recent),
-                    ],
-                  ]),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) =>
+                        _dashboardContent(context, index, summary),
+                    childCount: _dashboardContentCount,
+                  ),
                 ),
               ),
             ],
@@ -234,5 +200,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
       ),
     );
+  }
+
+  int get _dashboardContentCount {
+    var count = 6;
+    if (_visibleSections.contains(_DashboardSection.evolution)) count += 4;
+    if (_visibleSections.contains(_DashboardSection.categories)) count += 4;
+    if (_visibleSections.contains(_DashboardSection.recent)) count += 3;
+    return count;
+  }
+
+  Widget _dashboardContent(
+    BuildContext context,
+    int index,
+    DashboardSummary summary,
+  ) {
+    final content = <Widget Function()>[
+      () => _PeriodSelector(
+        selectedPeriod: _selectedPeriod,
+        onChanged: (period) => setState(() => _selectedPeriod = period),
+      ),
+      () => const SizedBox(height: 10),
+      () => OutlinedButton.icon(
+        onPressed: () => _openSectionSettings(context),
+        icon: const Icon(Icons.tune_rounded),
+        label: const Text('Personalizar dashboard'),
+      ),
+      () => const SizedBox(height: 16),
+      () => _BalanceSummary(summary: summary),
+      () => const SizedBox(height: 20),
+    ];
+
+    if (_visibleSections.contains(_DashboardSection.evolution)) {
+      content.addAll([
+        () => const _SectionTitle(title: 'Entradas x despesas'),
+        () => const SizedBox(height: 10),
+        // The sliver builder only invokes this when the chart approaches the
+        // viewport, avoiding chart layout and painting during the first frame.
+        () => _EvolutionChart(summary: summary),
+        () => const SizedBox(height: 20),
+      ]);
+    }
+    if (_visibleSections.contains(_DashboardSection.categories)) {
+      content.addAll([
+        () => const _SectionTitle(title: 'Despesas por categoria'),
+        () => const SizedBox(height: 10),
+        () => _CategoryChart(totals: summary.expensesByCategory),
+        () => const SizedBox(height: 20),
+      ]);
+    }
+    if (_visibleSections.contains(_DashboardSection.recent)) {
+      content.addAll([
+        () => const _SectionTitle(title: 'Movimentações recentes'),
+        () => const SizedBox(height: 10),
+        () => _RecentTransactions(transactions: summary.recent),
+      ]);
+    }
+
+    return content[index]();
   }
 }

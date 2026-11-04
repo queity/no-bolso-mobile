@@ -1,24 +1,17 @@
 import '../entities/transaction.dart';
-import '../entities/transaction_page.dart';
 
 /// Contrato de acesso às transações.
 ///
-/// As telas (e, na etapa 2, o `TransactionsProvider`) dependem só desta
-/// interface — a implementação com Firestore fica em
-/// `data/repositories/transaction_repository_impl.dart`. Nos testes, basta
-/// uma implementação fake em memória.
+/// Os providers dependem só desta interface — a implementação com Firestore
+/// fica em `data/repositories/transaction_repository_impl.dart`. Nos testes,
+/// basta uma implementação fake em memória.
+///
+/// Não há busca paginada nem filtrada aqui: a listagem filtra em memória
+/// sobre o [watchAll] (busca por texto não existe no Firestore), com o
+/// `TransactionFilter` do domínio.
 abstract interface class TransactionRepository {
   /// Todas as transações do usuário, mais nova primeiro, em tempo real.
   Stream<List<Transaction>> watchAll(String userId);
-
-  /// Uma página da listagem, com filtros. Passe o [TransactionPage.cursor]
-  /// da página anterior em [after] para buscar a seguinte.
-  Future<TransactionPage> getPage({
-    required String userId,
-    int pageSize = 20,
-    Object? after,
-    TransactionFilter filter = const TransactionFilter(),
-  });
 
   /// Busca uma transação pelo id. `null` quando ela não existe mais.
   Future<Transaction?> getById(String id);

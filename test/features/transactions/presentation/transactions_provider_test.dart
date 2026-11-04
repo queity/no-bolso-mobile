@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_bolso_mobile/features/dashboard/domain/entities/dashboard_period.dart';
+import 'package:no_bolso_mobile/features/transactions/domain/entities/transaction.dart';
 import 'package:no_bolso_mobile/features/transactions/domain/usecases/save_transaction.dart';
 import 'package:no_bolso_mobile/features/transactions/presentation/providers/transactions_provider.dart';
 
@@ -82,6 +83,98 @@ void main() {
     expect(provider.hasError, isFalse);
     expect(provider.isLoading, isTrue);
     expect(repository.watchedUserIds, ['u1', 'u1']);
+  });
+
+  group('transactionsStream', () {
+    List<String?> ids(List<Transaction> list) => [for (final t in list) t.id];
+
+    test('quem assina depois recebe na hora a lista atual', () async {
+      provider.bindUser('u1');
+      repository.emit([buildTx(id: 'a'), buildTx(id: 'b')]);
+      await flush();
+
+      expect(ids(await provider.transactionsStream.first), ['a', 'b']);
+    });
+
+    test('acompanha cada atualização do repositório', () async {
+      provider.bindUser('u1');
+      final received = <List<String?>>[];
+      final sub = provider.transactionsStream.listen((l) => received.add(ids(l)));
+      addTearDown(sub.cancel);
+      await flush();
+
+      repository.emit([buildTx(id: 'a')]);
+      await flush();
+      repository.emit([buildTx(id: 'a'), buildTx(id: 'b')]);
+      await flush();
+
+      expect(received, [
+        <String?>[],
+        ['a'],
+        ['a', 'b'],
+      ]);
+    });
+
+    test('ao sair, emite lista vazia', () async {
+      provider.bindUser('u1');
+      repository.emit([buildTx(id: 'a')]);
+      await flush();
+
+      provider.bindUser(null);
+      await flush();
+
+      expect(await provider.transactionsStream.first, isEmpty);
+    });
+
+    test('vários ouvintes não abrem outra assinatura no repositório', () async {
+      provider.bindUser('u1');
+      final a = provider.transactionsStream.listen((_) {});
+      final b = provider.transactionsStream.listen((_) {});
+      addTearDown(a.cancel);
+      addTearDown(b.cancel);
+      await flush();
+
+      expect(repository.watchedUserIds, ['u1']);
+    });
+  });
+
+  group('refresh (puxar para atualizar)', () {
+    test('assina de novo e completa quando chegam os dados', () async {
+      provider.bindUser('u1');
+      repository.emit([buildTx(id: 'a')]);
+      await flush();
+
+      var done = false;
+      provider.refresh().then((_) => done = true);
+      await flush();
+
+      expect(repository.watchedUserIds, ['u1', 'u1']);
+      expect(provider.transactions, hasLength(1), reason: 'mantém o que já tinha');
+      expect(done, isFalse);
+
+      repository.emit([buildTx(id: 'a'), buildTx(id: 'b')]);
+      await flush();
+
+      expect(done, isTrue);
+      expect(provider.transactions, hasLength(2));
+    });
+
+    test('também completa se der erro', () async {
+      provider.bindUser('u1');
+      var done = false;
+      provider.refresh().then((_) => done = true);
+
+      repository.emitError(Exception('offline'));
+      await flush();
+
+      expect(done, isTrue);
+      expect(provider.hasError, isTrue);
+    });
+
+    test('sem usuário logado, completa na hora sem assinar nada', () async {
+      await provider.refresh();
+      expect(repository.watchedUserIds, isEmpty);
+    });
   });
 
   test('revision muda a cada atualização dos dados', () async {

@@ -37,6 +37,7 @@ class TransactionsProvider extends ChangeNotifier {
   StreamSubscription<List<Transaction>>? _subscription;
   List<Transaction> _transactions = const [];
   bool _isLoading = false;
+  bool _hasLoadedInitialData = false;
   Object? _error;
   int _revision = 0;
   bool _disposed = false;
@@ -48,6 +49,7 @@ class TransactionsProvider extends ChangeNotifier {
   /// Transações do usuário, mais nova primeiro. Lista imutável.
   List<Transaction> get transactions => _transactions;
   bool get isLoading => _isLoading;
+  bool get hasLoadedInitialData => _hasLoadedInitialData;
   bool get hasError => _error != null;
   Object? get error => _error;
   String? get userId => _userId;
@@ -69,6 +71,7 @@ class TransactionsProvider extends ChangeNotifier {
     _transactions = const [];
     _error = null;
     _isLoading = userId != null;
+    _hasLoadedInitialData = false;
     _revision++;
 
     if (userId != null) _listen(userId);
@@ -96,6 +99,7 @@ class TransactionsProvider extends ChangeNotifier {
           (items) {
             _transactions = List.unmodifiable(items);
             _isLoading = false;
+            _hasLoadedInitialData = true;
             _error = null;
             _revision++;
             notifyListeners();
@@ -103,6 +107,7 @@ class TransactionsProvider extends ChangeNotifier {
           onError: (Object error) {
             debugPrint('Erro ao observar transações: $error');
             _isLoading = false;
+            _hasLoadedInitialData = true;
             _error = error;
             notifyListeners();
           },

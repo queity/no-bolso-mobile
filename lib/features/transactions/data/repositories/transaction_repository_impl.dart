@@ -1,7 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
-
 import '../../domain/entities/transaction.dart';
-import '../../domain/entities/transaction_page.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../datasources/transaction_firestore_datasource.dart';
 import '../models/transaction_dto.dart';
@@ -24,31 +21,6 @@ class TransactionRepositoryImpl implements TransactionRepository {
         .asyncMap(
           (snapshot) => Future.wait(snapshot.docs.map(_fromDoc)),
         );
-  }
-
-  @override
-  Future<TransactionPage> getPage({
-    required String userId,
-    int pageSize = 20,
-    Object? after,
-    TransactionFilter filter = const TransactionFilter(),
-  }) async {
-    final snapshot = await _datasource.getPage(
-      userId: userId,
-      pageSize: pageSize,
-      startAfter: after as DocumentSnapshot<Map<String, dynamic>>?,
-      category: filter.category?.name,
-      startDate: filter.startDate,
-      endDate: filter.endDate,
-    );
-
-    final docs = snapshot.docs;
-    return TransactionPage(
-      items: await Future.wait(docs.map(_fromDoc)),
-      hasMore: docs.length == pageSize,
-      // Sem documentos, mantém o cursor anterior: nada mudou.
-      cursor: docs.isEmpty ? after : docs.last,
-    );
   }
 
   @override

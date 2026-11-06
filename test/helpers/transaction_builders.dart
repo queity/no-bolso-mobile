@@ -8,6 +8,7 @@ Transaction buildTx({
   bool income = false,
   DateTime? date,
   TransactionCategory? category,
+  String? description,
 }) {
   return Transaction(
     id: id,
@@ -17,5 +18,6 @@ Transaction buildTx({
     type: TransactionType.pix,
     date: date ?? DateTime(2026, 10, 15),
     category: category,
+    description: description,
   );
 }

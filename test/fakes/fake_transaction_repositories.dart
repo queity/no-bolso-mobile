@@ -1,15 +1,12 @@
 import 'dart:async';
 
 import 'package:no_bolso_mobile/features/transactions/domain/entities/transaction.dart';
-import 'package:no_bolso_mobile/features/transactions/domain/entities/transaction_page.dart';
 import 'package:no_bolso_mobile/features/transactions/domain/repositories/receipt_repository.dart';
 import 'package:no_bolso_mobile/features/transactions/domain/repositories/transaction_repository.dart';
 
 /// [TransactionRepository] em memória para testes.
 ///
 /// - [emit] / [emitError] simulam o stream em tempo real do `watchAll`.
-/// - [pages] é a fila de respostas do `getPage` (vazia = página vazia), e
-///   [pageCalls] registra os parâmetros de cada chamada.
 class FakeTransactionRepository implements TransactionRepository {
   final List<Transaction> added = [];
   final List<Transaction> updated = [];
@@ -17,10 +14,6 @@ class FakeTransactionRepository implements TransactionRepository {
 
   final List<String> watchedUserIds = [];
   StreamController<List<Transaction>>? _watchController;
-
-  final List<TransactionPage> pages = [];
-  final List<({String userId, Object? after, TransactionFilter filter})>
-  pageCalls = [];
 
   final Map<String, Transaction> byId = {};
   int getByIdCalls = 0;
@@ -42,18 +35,6 @@ class FakeTransactionRepository implements TransactionRepository {
   Future<Transaction?> getById(String id) async {
     getByIdCalls++;
     return byId[id];
-  }
-
-  @override
-  Future<TransactionPage> getPage({
-    required String userId,
-    int pageSize = 20,
-    Object? after,
-    TransactionFilter filter = const TransactionFilter(),
-  }) async {
-    pageCalls.add((userId: userId, after: after, filter: filter));
-    if (pages.isEmpty) return const TransactionPage(items: [], hasMore: false);
-    return pages.removeAt(0);
   }
 
   @override

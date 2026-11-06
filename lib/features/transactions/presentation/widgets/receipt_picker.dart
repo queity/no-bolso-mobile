@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -64,18 +65,14 @@ class ReceiptPicker extends StatelessWidget {
             children: [
               Expanded(
                 child: TextButton.icon(
-                  onPressed: enabled
-                      ? () => onPick(ImageSource.camera)
-                      : null,
+                  onPressed: enabled ? () => onPick(ImageSource.camera) : null,
                   icon: const Icon(Icons.photo_camera_outlined),
                   label: const Text('Câmera'),
                 ),
               ),
               Expanded(
                 child: TextButton.icon(
-                  onPressed: enabled
-                      ? () => onPick(ImageSource.gallery)
-                      : null,
+                  onPressed: enabled ? () => onPick(ImageSource.gallery) : null,
                   icon: const Icon(Icons.image_outlined),
                   label: const Text('Galeria'),
                 ),
@@ -174,11 +171,10 @@ class _ReceiptPreview extends StatelessWidget {
                 // A imagem local tem prioridade: é a que o usuário acabou de
                 // escolher e ainda não foi enviada.
                 ? Image.file(localFile!, fit: BoxFit.cover)
-                : Image.network(
-                    remoteUrl!,
+                : CachedNetworkImage(
+                    imageUrl: remoteUrl!,
                     fit: BoxFit.cover,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
+                    placeholder: (context, url) {
                       return ColoredBox(
                         color: colorScheme.surfaceContainerHighest,
                         child: const Center(
@@ -186,7 +182,7 @@ class _ReceiptPreview extends StatelessWidget {
                         ),
                       );
                     },
-                    errorBuilder: (context, error, stackTrace) {
+                    errorWidget: (context, url, error) {
                       return ColoredBox(
                         color: colorScheme.surfaceContainerHighest,
                         child: Center(

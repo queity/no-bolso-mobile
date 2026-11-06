@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../transactions/presentation/providers/transactions_provider.dart';
 
 /// Tela inicial exibida enquanto verificamos o estado de autenticação.
 ///
@@ -39,8 +40,14 @@ class _SplashScreenState extends State<SplashScreen> {
     // context.watch reconstrói esta tela sempre que o AuthProvider mudar
     // (ex.: o Firebase termina de resolver a sessão salva).
     final isInitializing = context.watch<AuthProvider>().isInitializing;
+    final auth = context.read<AuthProvider>();
+    final transactionsReady = context.select<TransactionsProvider?, bool>(
+      (provider) => provider?.hasLoadedInitialData ?? true,
+    );
 
-    if (_minimumDelayElapsed && !isInitializing) {
+    if (_minimumDelayElapsed &&
+        !isInitializing &&
+        (!auth.isAuth || transactionsReady)) {
       // Sempre tenta ir pro dashboard: se o usuário não estiver autenticado,
       // o `redirect` do GoRouter (em app_router.dart) intercepta e manda
       // pro /login sozinho. Isso evita duplicar a checagem de isAuth aqui.

@@ -61,10 +61,12 @@ class AppDependencies {
     // Segue o usuário logado: troca de stream no login e limpa tudo no
     // logout, sem nenhuma tela precisar pedir.
     ChangeNotifierProxyProvider<AuthProvider, TransactionsProvider>(
+      // This provider is intentionally eager: it starts the single stream
+      // used to preload transactions as soon as authentication resolves.
+      lazy: false,
       create: (_) =>
           TransactionsProvider(transactionRepository, saveTransaction),
-      update: (_, auth, transactions) =>
-          transactions!..bindUser(auth.user?.id),
+      update: (_, auth, transactions) => transactions!..bindUser(auth.user?.id),
     ),
 
     // Recarrega a listagem paginada quando as transações mudam.
@@ -73,6 +75,7 @@ class AppDependencies {
       TransactionsProvider,
       TransactionListProvider
     >(
+      lazy: true,
       create: (_) => TransactionListProvider(transactionRepository),
       update: (_, auth, transactions, list) =>
           list!..sync(userId: auth.user?.id, revision: transactions.revision),

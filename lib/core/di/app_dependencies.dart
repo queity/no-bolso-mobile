@@ -69,16 +69,18 @@ class AppDependencies {
       update: (_, auth, transactions) => transactions!..bindUser(auth.user?.id),
     ),
 
-    // Recarrega a listagem paginada quando as transações mudam.
+    // Filtra a mesma stream de transações usada pelo Dashboard.
     ChangeNotifierProxyProvider2<
       AuthProvider,
       TransactionsProvider,
       TransactionListProvider
     >(
       lazy: true,
-      create: (_) => TransactionListProvider(transactionRepository),
+      create: (context) => TransactionListProvider(
+        context.read<TransactionsProvider>().transactionsStream,
+      ),
       update: (_, auth, transactions, list) =>
-          list!..sync(userId: auth.user?.id, revision: transactions.revision),
+          list!..bindUser(auth.user?.id),
     ),
   ];
 }

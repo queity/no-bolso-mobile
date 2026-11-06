@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
+
 import '../../domain/entities/transaction.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../datasources/transaction_firestore_datasource.dart';

@@ -44,8 +44,14 @@ dependencies:
   # Firebase
   firebase_core: ^4.13.0
   firebase_auth: ^6.5.7
+  firebase_app_check: ^0.4.0+1
   cloud_firestore: ^6.8.0
   firebase_storage: ^13.4.6
+
+  # Segurança local
+  encrypt: ^5.0.3
+  flutter_secure_storage: ^9.2.4
+  local_auth: ^2.3.0
 
   # Utilitários (datas, moeda)
   intl: ^0.20.3

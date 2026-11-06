@@ -12,7 +12,8 @@ banco de dados (Cloud Firestore) e armazenamento de arquivos (Firebase Storage).
 - **Flutter** (mobile)
 - **go_router** — navegação
 - **provider** — gerenciamento de estado
-- **Firebase**: `firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_storage`
+- **Firebase**: `firebase_core`, `firebase_auth`, `firebase_app_check`, `cloud_firestore`, `firebase_storage`
+- **Segurança local**: `encrypt`, `flutter_secure_storage`, `local_auth`
 - **fl_chart** — gráficos do dashboard
 - **image_picker** — captura/seleção da foto do recibo
 - **intl** — formatação de datas e moeda (pt_BR)
@@ -26,6 +27,9 @@ Todas declaradas em `pubspec.yaml`, instaladas com `flutter pub get`:
 | `go_router` | navegação e rotas (bottom nav, telas empilhadas) |
 | `provider` | estado global (sessão do usuário) |
 | `firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_storage` | conexão com o Firebase |
+| `firebase_app_check` | atestação do app no Android e iOS |
+| `encrypt`, `flutter_secure_storage` | criptografia AES-GCM das descrições e guarda local da chave |
+| `local_auth` | bloqueio local por biometria ou credencial do dispositivo |
 | `fl_chart` | gráficos de evolução e categorias do dashboard |
 | `image_picker` | anexar foto do recibo (câmera/galeria) |
 | `intl` | formatação de datas e valores monetários |
@@ -236,3 +240,37 @@ pode ser lido, editado ou apagado pelo próprio dono, via `request.auth.uid`.
   aponta pro target `default`; se precisar reconfigurar em outra máquina,
   rodar `firebase target:apply storage default no-bolso-mobile.firebasestorage.app`
   antes do primeiro `firebase deploy --only storage`).
+
+As rules agora também validam o schema/tipos das transações e limitam recibos
+a JPG, PNG, WebP ou HEIC de até 5 MiB. Depois de revisar, publique as regras
+versionadas com `firebase deploy --only firestore:rules,storage` — alterações
+locais não entram em vigor no Firebase até o deploy.
+
+### Configuração de segurança necessária no Firebase Console
+
+- **Authentication → Settings → Password policy**: habilite uma política com
+  mínimo de 12 caracteres, letras minúsculas/maiúsculas, números e símbolos.
+  A validação no formulário é apenas feedback; a política do Firebase é o
+  enforcement no servidor. Verifique a política antes de exigir novos
+  cadastros, pois contas antigas podem ter senhas que não atendem aos critérios.
+- **App Check**: registre os apps Android/iOS no Firebase Console e configure
+  Play Integrity para Android e App Attest para iOS. O app usa os provedores
+  de debug em builds debug e os provedores de produção em builds release. Os
+  tokens de debug precisam ser registrados no Console. Primeiro monitore as
+  métricas e só depois habilite enforcement para Firestore e Storage, para
+  evitar bloquear versões legítimas. App Check não está ativado para Web ou
+  Windows neste projeto.
+- **Biometria**: em dispositivos móveis, o app pede biometria ou credencial
+  de desbloqueio do sistema ao voltar do segundo plano. Se o dispositivo não
+  tiver uma credencial configurada, a tela permite sair da conta.
+
+### Criptografia de descrições
+
+Descrições novas são cifradas com AES-256-GCM antes de serem gravadas no
+Firestore; a chave aleatória fica em `flutter_secure_storage`. Descrições
+antigas em texto puro continuam legíveis e são cifradas quando forem salvas
+novamente. A chave é local ao aparelho e não é sincronizada: uma reinstalação
+ou troca de dispositivo pode tornar descrições já cifradas ilegíveis. Para
+sincronizar/recuperar essas chaves entre dispositivos seria necessário
+projetar um mecanismo de recuperação separado antes de habilitar o recurso
+em produção.

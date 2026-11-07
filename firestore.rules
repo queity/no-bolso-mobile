@@ -3,6 +3,35 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function validTransaction(data, uid) {
+      return data.keys().hasAll([
+               'userId', 'amount', 'direction', 'type', 'date',
+               'category', 'description', 'receiptUrl'
+             ])
+             && data.keys().hasOnly([
+               'userId', 'amount', 'direction', 'type', 'date',
+               'category', 'description', 'receiptUrl'
+             ])
+             && data.userId is string
+             && data.userId == uid
+             && data.amount is number
+             && data.amount >= 0.01
+             && data.amount <= 999999999.99
+             && data.direction in ['entrada', 'saida']
+             && data.type in ['pix', 'deposito', 'transferencia', 'saque', 'outros']
+             && data.date is timestamp
+             && (data.category == null || data.category in [
+               'alimentacao', 'lazer', 'assinatura', 'casa', 'educacao',
+               'receitasFixas', 'outros', 'saude', 'transporte',
+               'receitasVariaveis', 'viagem'
+             ])
+             // AES-GCM ciphertext of a 255-character description stays below 2 KB.
+             && (data.description == null ||
+                 (data.description is string && data.description.size() <= 2048))
+             && (data.receiptUrl == null ||
+                 (data.receiptUrl is string && data.receiptUrl.size() <= 2048));
+    }
+
     // Transações são privadas: cada usuário só enxerga e mexe nas suas.
     //
     // A checagem de dono que existe na tela de edição é só experiência do
@@ -11,13 +40,17 @@ service cloud.firestore {
     match /transactions/{transactionId} {
 
       // `resource.data` é o documento como ele já está no banco.
-      allow read, update, delete: if request.auth != null
-                                  && resource.data.userId == request.auth.uid;
+      allow read, delete: if request.auth != null
+              && resource.data.userId == request.auth.uid;
 
       // `request.resource.data` é o documento que está chegando. Sem essa
       // regra, um usuário logado conseguiria criar transação no nome de outro.
       allow create: if request.auth != null
-                    && request.resource.data.userId == request.auth.uid;
+            && validTransaction(request.resource.data, request.auth.uid);
+
+      allow update: if request.auth != null
+            && resource.data.userId == request.auth.uid
+            && validTransaction(request.resource.data, request.auth.uid);
     }
 
     // Tudo que não foi liberado acima fica bloqueado.

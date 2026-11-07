@@ -36,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // Chama o Firebase passando o e-mail e senha digitados
       await context.read<AuthProvider>().signIn(
         email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+        password: _passwordController.text,
       );
 
       // Sucesso! O AuthProvider que envolvemos no main.dart já percebeu o
@@ -50,6 +50,41 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_loginErrorMessage(e.code)),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handlePasswordReset() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe um e-mail válido primeiro.')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await context.read<AuthProvider>().sendPasswordResetEmail(email: email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Se houver uma conta para esse e-mail, enviaremos as instruções de recuperação.',
+            ),
+          ),
+        );
+      }
+    } on AuthException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível enviar o e-mail. Tente novamente.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -191,6 +226,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         }
                         return null;
                       },
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _isLoading ? null : _handlePasswordReset,
+                        child: const Text('Esqueci minha senha'),
+                      ),
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(

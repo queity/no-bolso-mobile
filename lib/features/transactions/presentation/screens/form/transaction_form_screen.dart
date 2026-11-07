@@ -265,6 +265,10 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
         ),
       );
       _closeForm();
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      _showError(e.message);
     } catch (e) {
       if (!mounted) return;
       setState(() {

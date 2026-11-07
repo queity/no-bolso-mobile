@@ -8,6 +8,8 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>No Bolso Mobile</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>O No Bolso usa o Face ID para proteger o acesso às suas finanças.</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

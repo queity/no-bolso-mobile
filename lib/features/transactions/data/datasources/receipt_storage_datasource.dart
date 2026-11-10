@@ -18,14 +18,30 @@ class ReceiptStorageDatasource {
   /// a URL de download.
   Future<String> upload(File imageFile, String userId) async {
     try {
+      const maxFileSize = 5 * 1024 * 1024;
+      final fileSize = await imageFile.length();
+      if (fileSize == 0 || fileSize > maxFileSize) {
+        throw const FormatException('O recibo deve ter até 5 MB.');
+      }
+
       final fileName = DateTime.now().millisecondsSinceEpoch.toString();
 
-      // Mantém a extensão original (jpg, png, heic...) pra não gravar tudo
-      // como .jpg e o Storage servir o arquivo com o tipo errado.
       final extension = imageFile.path.split('.').last.toLowerCase();
+      final contentType = switch (extension) {
+        'jpg' || 'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'heic' => 'image/heic',
+        _ => throw const FormatException(
+          'Formato não permitido. Use JPG, PNG, WebP ou HEIC.',
+        ),
+      };
 
       final ref = _storage.ref().child('receipts/$userId/$fileName.$extension');
-      final snapshot = await ref.putFile(imageFile);
+      final snapshot = await ref.putFile(
+        imageFile,
+        SettableMetadata(contentType: contentType),
+      );
       return await snapshot.ref.getDownloadURL();
     } catch (e) {
       debugPrint("Erro ao fazer upload do recibo: $e");

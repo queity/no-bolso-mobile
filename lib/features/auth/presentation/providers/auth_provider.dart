@@ -62,6 +62,9 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> sendPasswordResetEmail({required String email}) =>
+      _repository.sendPasswordResetEmail(email: email);
+
   /// Ao sair, o stream de sessão emite `null`, o GoRouter manda pro login e
   /// o `TransactionsProvider` descarta os dados do usuário.
   Future<void> signOut() => _repository.signOut();

@@ -36,6 +36,10 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> sendPasswordResetEmail({required String email}) =>
+      _guard(() => _datasource.sendPasswordResetEmail(email));
+
+  @override
   Future<void> signOut() => _guard(_datasource.signOut);
 
   static AppUser? _toAppUser(User? user) {

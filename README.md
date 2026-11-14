@@ -45,10 +45,35 @@ Todas declaradas em `pubspec.yaml`, instaladas com `flutter pub get`:
 O código segue **Clean Architecture** organizada **por feature**. Cada feature
 tem três camadas, e a dependência só aponta para dentro:
 
+```mermaid
+flowchart LR
+    subgraph presentation["presentation (Flutter)"]
+        UI[Telas e Widgets]
+        PR[Providers]
+    end
+    subgraph domain["domain (Dart puro)"]
+        EN[Entidades]
+        IR[Interfaces de repositório]
+        UC[Casos de uso]
+    end
+    subgraph data["data (Firebase)"]
+        RI[Implementações de repositório]
+        DT[DTOs]
+        DS[Datasources]
+    end
+    UI --> PR
+    PR --> UC
+    PR --> IR
+    UC --> IR
+    UC --> EN
+    RI -.implementa.-> IR
+    RI --> DT
+    RI --> DS
 ```
-presentation  ──►  domain  ◄──  data
-(telas, Provider)  (regras, Dart puro)  (Firebase)
-```
+
+A seta pontilhada é a inversão de dependência: `data` conhece o `domain`,
+nunca o contrário. Por isso o `domain` compila sem Flutter e sem Firebase —
+e por isso os testes rodam sem emulador.
 
 - **domain**: entidades, interfaces de repositório e casos de uso. Dart puro,
   sem Flutter nem Firebase.
@@ -162,7 +187,7 @@ tela principal do app. As telas de Nova/Editar transação abrem por cima, sem a
 
 ### Pré-requisitos
 
-- [Flutter SDK](https://docs.flutter.dev/get-started/install) instalado
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) — canal stable, com Dart `^3.12.2` (ver `environment` no `pubspec.yaml`)
 - Um dispositivo pra rodar o app: emulador Android (via Android Studio →
   Device Manager) ou um device físico com depuração USB ativada
 
@@ -219,6 +244,58 @@ setx Path "$($env:Path);$env:LOCALAPPDATA\Pub\Cache\bin"
 ```bash
 flutter analyze
 flutter test
+```
+
+Detalhes da suíte na seção [Testes](#testes).
+
+## Testes
+
+**74 testes automatizados**, que rodam sem Firebase, sem emulador e sem rede:
+domínio e estado são exercitados contra repositórios fake.
+
+```bash
+flutter test                # suíte completa
+flutter test --coverage     # gera coverage/lcov.info
+```
+
+### O que está coberto
+
+| Camada | Cobertura | O que os testes garantem |
+|---|---|---|
+| `domain/` | **98%** | filtros de busca/categoria/período, cálculos do dashboard, caso de uso `SaveTransaction`, entidade e códigos legados do No Bolso web |
+| `presentation/providers/` | **96%** | assinatura única por usuário, troca e encerramento de sessão, debounce da busca, `combineLatest` de dados + filtros, paginação, cache do resumo |
+| `data/` | 37% | conversão entidade ↔ Firestore (`TransactionDto`, `TransactionRepositoryImpl`) |
+| telas | 4% | apenas a inicialização até a Splash; a UI é verificada manualmente |
+
+Os **datasources não têm teste de unidade de propósito**: eles só repassam
+chamadas ao SDK do Firebase, e cobri-los exigiria subir o emulador do Firebase
+— o que testaria o SDK, não o nosso código.
+
+### Como os testes isolam o Firebase
+
+`test/fakes/` traz implementações em memória das **interfaces do domínio**:
+`FakeAuthRepository`, `FakeTransactionRepository` e `FakeReceiptRepository`.
+Como os providers dependem das interfaces, e não das classes do Firebase,
+montar o provider com o fake é suficiente — é a separação de camadas pagando
+o investimento.
+
+`test/helpers/transaction_builders.dart` expõe `buildTx(...)` para os testes
+não repetirem o construtor completo da entidade a cada caso.
+
+### Organização
+
+```
+test/
+├── fakes/                     # repositórios em memória
+├── helpers/                   # builders de entidades
+├── features/
+│   ├── auth/presentation/     # AuthProvider
+│   ├── dashboard/domain/      # DashboardSummary (cálculos puros)
+│   └── transactions/
+│       ├── domain/            # entidade, TransactionFilter, SaveTransaction
+│       ├── data/              # TransactionDto, TransactionRepositoryImpl
+│       └── presentation/      # TransactionsProvider, TransactionListProvider
+└── widget_test.dart           # o app sobe e chega na Splash
 ```
 
 ## Design system

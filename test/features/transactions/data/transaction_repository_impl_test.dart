@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_bolso_mobile/features/transactions/data/datasources/transaction_firestore_datasource.dart';
 import 'package:no_bolso_mobile/features/transactions/data/repositories/transaction_repository_impl.dart';
+import 'package:no_bolso_mobile/features/transactions/data/security/description_cipher.dart';
 import 'package:no_bolso_mobile/features/transactions/domain/entities/transaction.dart';
 
 /// Datasource falso: registra o que recebeu, sem tocar no Firestore.
@@ -33,13 +34,33 @@ class _FakeDatasource implements TransactionFirestoreDatasource {
       throw UnimplementedError();
 }
 
+/// Cifra falsa: devolve o texto como veio.
+///
+/// A criptografia real tem o teste dela; aqui o que importa é a conversão
+/// entidade -> mapa e o repositório delegar a cifra, em vez de gravar a
+/// descrição crua no Firestore.
+class _FakeCipher extends DescriptionCipher {
+  final List<String?> cifradas = [];
+
+  @override
+  Future<String?> encryptDescription(String? description) async {
+    cifradas.add(description);
+    return description;
+  }
+
+  @override
+  Future<String?> decryptDescription(String? value) async => value;
+}
+
 void main() {
   late _FakeDatasource datasource;
+  late _FakeCipher cipher;
   late TransactionRepositoryImpl repository;
 
   setUp(() {
     datasource = _FakeDatasource();
-    repository = TransactionRepositoryImpl(datasource);
+    cipher = _FakeCipher();
+    repository = TransactionRepositoryImpl(datasource, cipher);
   });
 
   Transaction build({String? id}) {
@@ -66,6 +87,11 @@ void main() {
     expect(map['type'], 'pix');
     expect(map['category'], 'alimentacao');
     expect(map['description'], 'Mercado');
+    expect(
+      cipher.cifradas,
+      ['Mercado'],
+      reason: 'a descrição passa pela cifra antes de ir ao Firestore',
+    );
     expect(map['receiptUrl'], isNull);
     expect(
       map['date'],

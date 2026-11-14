@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/errors/auth_exception.dart';
+import '../password_policy.dart';
 import '../providers/auth_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -44,7 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await context.read<AuthProvider>().signUp(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+        password: _passwordController.text,
       );
 
       // Conta criada com sucesso! O Firebase já loga o usuário automaticamente.
@@ -73,7 +74,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       case 'invalid-email':
         return 'E-mail inválido.';
       case 'weak-password':
-        return 'Senha muito fraca. Use ao menos 6 caracteres.';
+        return 'Senha fora da política de segurança. Verifique os requisitos.';
       case 'network-request-failed':
         return 'Sem conexão com a internet. Tente novamente.';
       default:
@@ -157,6 +158,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: 'Senha',
+                        helperText:
+                            '12+ caracteres, maiúscula, minúscula, número e símbolo',
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: IconButton(
                           icon: Icon(
@@ -171,15 +174,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           },
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Informe sua senha';
-                        }
-                        if (value.length < 6) {
-                          return 'A senha deve ter ao menos 6 caracteres';
-                        }
-                        return null;
-                      },
+                      validator: PasswordPolicy.validate,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(

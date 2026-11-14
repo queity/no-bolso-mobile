@@ -9,6 +9,7 @@ import '../../features/transactions/data/datasources/receipt_storage_datasource.
 import '../../features/transactions/data/datasources/transaction_firestore_datasource.dart';
 import '../../features/transactions/data/repositories/receipt_repository_impl.dart';
 import '../../features/transactions/data/repositories/transaction_repository_impl.dart';
+import '../../features/transactions/data/security/description_cipher.dart';
 import '../../features/transactions/domain/repositories/receipt_repository.dart';
 import '../../features/transactions/domain/repositories/transaction_repository.dart';
 import '../../features/transactions/domain/usecases/save_transaction.dart';
@@ -39,6 +40,7 @@ class AppDependencies {
       authRepository: AuthRepositoryImpl(FirebaseAuthDatasource()),
       transactionRepository: TransactionRepositoryImpl(
         TransactionFirestoreDatasource(),
+        DescriptionCipher(),
       ),
       receiptRepository: ReceiptRepositoryImpl(ReceiptStorageDatasource()),
     );
@@ -67,8 +69,7 @@ class AppDependencies {
       update: (_, auth, transactions) => transactions!..bindUser(auth.user?.id),
     ),
 
-    // Busca e filtros da listagem. Consome o mesmo stream do
-    // TransactionsProvider, então salvar ou excluir já reflete aqui.
+    // Filtra a mesma stream de transações usada pelo Dashboard.
     ChangeNotifierProxyProvider2<
       AuthProvider,
       TransactionsProvider,
@@ -78,7 +79,8 @@ class AppDependencies {
       create: (context) => TransactionListProvider(
         context.read<TransactionsProvider>().transactionsStream,
       ),
-      update: (_, auth, transactions, list) => list!..bindUser(auth.user?.id),
+      update: (_, auth, transactions, list) =>
+          list!..bindUser(auth.user?.id),
     ),
   ];
 }

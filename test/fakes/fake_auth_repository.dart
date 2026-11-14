@@ -23,5 +23,8 @@ class FakeAuthRepository implements AuthRepository {
   }) async => AppUser(id: 'fake-uid', name: name, email: email);
 
   @override
+  Future<void> sendPasswordResetEmail({required String email}) async {}
+
+  @override
   Future<void> signOut() async {}
 }

@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../../core/security/app_lock_gate.dart';
 import '../../../../../core/theme/financial_colors.dart';
 import '../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../domain/entities/transaction.dart';
@@ -98,9 +99,9 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       // Usa a transação que já está em memória no provider (aberta pela
       // lista ou pelo dashboard); só vai ao banco quando a tela foi aberta
       // direto por link.
-      final transaction = await context
-          .read<TransactionsProvider>()
-          .getById(widget.transactionId!);
+      final transaction = await context.read<TransactionsProvider>().getById(
+        widget.transactionId!,
+      );
 
       if (!mounted) return;
 
@@ -148,12 +149,15 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
 
   Future<void> _pickReceipt(ImageSource source) async {
     try {
-      final picked = await _imagePicker.pickImage(
-        source: source,
-        // Recibo é foto de papel: reduzir já economiza banda e Storage sem
-        // atrapalhar a leitura do comprovante.
-        maxWidth: 1600,
-        imageQuality: 85,
+      final picked = await AppLockGate.runExternalActivity(
+        context,
+        () => _imagePicker.pickImage(
+          source: source,
+          // Recibo é foto de papel: reduzir já economiza banda e Storage sem
+          // atrapalhar a leitura do comprovante.
+          maxWidth: 1600,
+          imageQuality: 85,
+        ),
       );
 
       if (picked == null || !mounted) return;
@@ -265,6 +269,10 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
         ),
       );
       _closeForm();
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      _showError(e.message);
     } catch (e) {
       if (!mounted) return;
       setState(() {
